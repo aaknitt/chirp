@@ -372,6 +372,7 @@
 | <a name="Yaesu_FT-1D_R"></a> Yaesu_FT-1D_R | [Implied by Yaesu_FT3D_R](#user-content-Yaesu_FT3D_R) | 30-Dec-2022 | Yes | 0.03% |
 | <a name="Yaesu_FT-25R"></a> Yaesu_FT-25R | [Implied by Yaesu_FT-4XE](#user-content-Yaesu_FT-4XE) | 24-Dec-2022 | Yes | 0.01% |
 | <a name="Yaesu_FT-2800M"></a> Yaesu_FT-2800M | [Reported working](https://chirp.danplanet.com/issues/10616) | 05-Jun-2023 | Yes | 0.03% |
+| <a name="Yaesu_FT-2800MTXMod_Opened_Xmit"></a> Yaesu_FT-2800MTXMod_Opened_Xmit |  |  | Yes |  |
 | <a name="Yaesu_FT-2900R_1900R"></a> Yaesu_FT-2900R_1900R | [Reported working](https://chirp.danplanet.com/issues/10274) | 14-Jan-2023 | Yes | 0.05% |
 | <a name="Yaesu_FT-2900R_1900RTXMod_Opened_Xmit"></a> Yaesu_FT-2900R_1900RTXMod_Opened_Xmit | [Implied by Yaesu_FT-2900R_1900R](#user-content-Yaesu_FT-2900R_1900R) | 14-Jan-2023 | Yes |  |
 | <a name="Yaesu_FT-450D"></a> Yaesu_FT-450D | [@Old-Phart](https://github.com/Old-Phart) | 01-Jun-2023 | Yes | 0.01% |
@@ -415,11 +416,11 @@
 | <a name="Zastone_ZT-X6"></a> Zastone_ZT-X6 | [Implied by Retevis_RT22](#user-content-Retevis_RT22) | 9-Dec-2022 | Yes | 0.11% |
 ## Stats
 
-**Drivers:** 412
+**Drivers:** 413
 
-**Tested:** 86% (357/55) (93% of usage stats)
+**Tested:** 86% (357/56) (93% of usage stats)
 
-**Byte clean:** 90% (372/40)
+**Byte clean:** 90% (373/40)
 
 ## Meaning of this testing
 

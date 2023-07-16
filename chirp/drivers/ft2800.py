@@ -33,7 +33,6 @@ def _send(s, data):
             raise Exception("Failed to read echo chunk")
 
 
-IDBLOCK = b"\x0c\x01\x41\x33\x35\x02\x00\xb8"
 TRAILER = b"\x0c\x02\x41\x33\x35\x00\x00\xb7"
 ACK = b"\x0C\x06\x00"
 
@@ -43,7 +42,8 @@ def _download(radio):
     attempts = 30
     for _i in range(0, attempts):
         data = radio.pipe.read(8)
-        if data == IDBLOCK:
+        print(data)
+        if data == radio.IDBLOCK:
             break
         LOG.debug('Download attempt %i received %i: %s',
                   _i, len(data), util.hexprint(data))
@@ -103,7 +103,7 @@ def _upload(radio):
             break
         LOG.debug("What is this garbage?\n%s" % util.hexprint(data))
 
-    _send(radio.pipe, IDBLOCK)
+    _send(radio.pipe, radio.IDBLOCK)
     time.sleep(1)
     ack = radio.pipe.read(300)
     LOG.debug("Ack was (%i):\n%s" % (len(ack), util.hexprint(ack)))
@@ -178,6 +178,7 @@ class FT2800Radio(YaesuCloneModeRadio):
     """Yaesu FT-2800"""
     VENDOR = "Yaesu"
     MODEL = "FT-2800M"
+    IDBLOCK = b"\x0c\x01\x41\x33\x35\x02\x00\xb8"
 
     _block_sizes = [8, 7680]
     _memsize = 7680
@@ -317,3 +318,17 @@ class FT2800Radio(YaesuCloneModeRadio):
     @classmethod
     def match_model(cls, filedata, filename):
         return len(filedata) == cls._memsize
+
+
+# This class is for the TX Modified FT-2800 (MARS/CAP Mod).
+# Enabling out of band TX changes the header received by CHIRP
+@directory.register
+class FT2800ModRadio(FT2800Radio):
+    """Yaesu FT-2800Mod"""
+    MODEL = "FT-2800M(TXMod)"
+    VARIANT = "Opened Xmit"
+    IDBLOCK = b"\x0c\x01\x41\x33\x35\x03\x00\xb9"
+
+    @classmethod
+    def match_model(cls, filedata, filename):
+        return False
