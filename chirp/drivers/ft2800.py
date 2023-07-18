@@ -33,6 +33,12 @@ def _send(s, data):
             raise Exception("Failed to read echo chunk")
 
 
+# The IDBLOCK is the first thing sent during an upload or download
+# and indicates the radio subtype:
+#   USA Unmodified:            b"\x0c\x01\x41\x33\x35\x02\x00\xb8"
+#   USA With extended TX mod:  b"\x0c\x01\x41\x33\x35\x03\x00\xb9"
+SUPPORTED_IDBLOCKS = [b"\x0c\x01\x41\x33\x35\x02\x00\xb8",
+                      b"\x0c\x01\x41\x33\x35\x03\x00\xb9"]
 TRAILER = b"\x0c\x02\x41\x33\x35\x00\x00\xb7"
 ACK = b"\x0C\x06\x00"
 
@@ -43,7 +49,8 @@ def _download(radio):
     for _i in range(0, attempts):
         data = radio.pipe.read(8)
         print(data)
-        if data == radio.IDBLOCK:
+        if data in SUPPORTED_IDBLOCKS:
+            radio.subtype = data
             break
         LOG.debug('Download attempt %i received %i: %s',
                   _i, len(data), util.hexprint(data))
@@ -103,7 +110,7 @@ def _upload(radio):
             break
         LOG.debug("What is this garbage?\n%s" % util.hexprint(data))
 
-    _send(radio.pipe, radio.IDBLOCK)
+    _send(radio.pipe, bytes(radio.subtype))
     time.sleep(1)
     ack = radio.pipe.read(300)
     LOG.debug("Ack was (%i):\n%s" % (len(ack), util.hexprint(ack)))
@@ -182,6 +189,17 @@ class FT2800Radio(YaesuCloneModeRadio):
 
     _block_sizes = [8, 7680]
     _memsize = 7680
+
+    @property
+    def subtype(self):
+        if 'subtype_idblock' in self.metadata:
+            return bytes(self.metadata['subtype_idblock'], 'latin1')
+        else:
+            return SUPPORTED_IDBLOCKS[0]
+
+    @subtype.setter
+    def subtype(self, value):
+        self.metadata = {'subtype_idblock': value.decode('latin1')}
 
     @classmethod
     def get_prompts(cls):
@@ -318,17 +336,3 @@ class FT2800Radio(YaesuCloneModeRadio):
     @classmethod
     def match_model(cls, filedata, filename):
         return len(filedata) == cls._memsize
-
-
-# This class is for the TX Modified FT-2800 (MARS/CAP Mod).
-# Enabling out of band TX changes the header received by CHIRP
-@directory.register
-class FT2800ModRadio(FT2800Radio):
-    """Yaesu FT-2800Mod"""
-    MODEL = "FT-2800M(TXMod)"
-    VARIANT = "Opened Xmit"
-    IDBLOCK = b"\x0c\x01\x41\x33\x35\x03\x00\xb9"
-
-    @classmethod
-    def match_model(cls, filedata, filename):
-        return False
