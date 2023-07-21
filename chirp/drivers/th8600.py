@@ -29,25 +29,25 @@ LOG = logging.getLogger(__name__)
 
 MEM_FORMAT = """
 struct chns {
-  ul32 rx_freq;
-  ul32 tx_freq;
+  ul32 rxfreq;
+  ul32 txfreq;
   ul16 rxtone;
   ul16 txtone;
   
   u8 power:2       // High=00,Mid=01,Low=10
      fmdev:2       // wide=00, mid=01, narrow=10
-     BCL:2         // off=00, sub=01, carrier=10
+     b_lock:2         // off=00, sub=01, carrier=10
      REV:1
      TxInh:1;
   u8 sqlmode:3     // SQ=000, CT=001, Tone=010, CT + Tone=011, CTC + Tone=100
-     hsdtype:2     // off=00, dtmf=01, 2-tone=10, 5-tone=11 
+     signal:2     // off=00, dtmf=01, 2-tone=10, 5-tone=11 
      TBD: 1
      talkoff: 1
      TBD: 1;
-  u8 5tonepttid: 2 //off=00, begin=01,end=10,both=11
+  u8 fivetonepttid: 2 //off=00, begin=01,end=10,both=11
      dtmfpttid: 2  //off=00, begin=01,end=10,both=11
      step: 4;       //
-  char name[6];
+  u8 name[6];
 };
 
 #seekto 0x0000;
@@ -120,7 +120,6 @@ def _rawsend(radio, data):
 
 
 def _make_read_frame(addr, length):
-    #fe:fe:ee:ef:eb:30:30:30:30:32:30:fd
     frame = b"\xFE\xFE\xEE\xEF\xEB"
     """Pack the info in the header format"""
     frame += bytes(f'{addr:x}'.zfill(4),'utf-8')
@@ -243,10 +242,17 @@ def _download(radio):
             LOG.warning("Incorrect start")
         if not d.endswith(b"\xFD"):
             LOG.warning("Incorrect end")
-        # could validate the block data
-
+        # could validate the block data with checksum
+        
         # Aggregate the data
-        data += d[11:-2]
+        ascii_data = d[11:-3]
+        if len(ascii_data)%2 != 0:
+            LOG.error("Invalid data length")
+        converted_data = b''
+        for i in range(0, len(ascii_data), 2):
+            LOG.debug(ascii_data[i] + ascii_data[i+1])
+            converted_data += int(ascii_data[i:i+2].decode('utf-8'),16).to_bytes(1,'big')
+        data += converted_data
 
         # UI Update
         status.cur = addr // BLOCK_SIZE
@@ -439,7 +445,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         """A value in a UI column for chan 'number' has been modified."""
         # update all raw channel memory values (_mem) from UI (mem)
         _mem = self._memobj.chan_mem[memory.number - 1]
-        _name = self._memobj.chan_name[memory.number - 1]
+        _name = self._memobj.chan_mem[memory.number - 1].name
 
         if memory.empty:
             _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
@@ -457,7 +463,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     def get_memory(self, number):
         # radio first channel is 1, mem map is base 0
         _mem = self._memobj.chan_mem[number - 1]
-        _name = self._memobj.chan_name[number - 1]
+        _name = self._memobj.chan_mem[number - 1].name
         mem = chirp_common.Memory()
         mem.number = number
 
@@ -500,8 +506,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         mem.name = ""
         for i in range(6):   # 0 - 6
             mem.name += chr(_mem.name[i])
-        for i in range(10):
-            mem.name += chr(_name.extra_name[i])
 
         mem.name = mem.name.rstrip()    # remove trailing spaces
 
@@ -527,8 +531,9 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             rxmode = "DTCS"
             mem.rx_dtcs = int(format(int(_mem.rxtone), 'o'))
 
-        mem.dtcs_polarity = ("N", "R")[_mem.encodeDSCI] + (
-                             "N", "R")[_mem.decodeDSCI]
+#        mem.dtcs_polarity = ("N", "R")[_mem.encodeDSCI] + (
+#                             "N", "R")[_mem.decodeDSCI]
+#                             "N", "R")[_mem.decodeDSCI]
 
         mem.tmode = ""
         if txmode == "Tone" and not rxmode:
@@ -543,7 +548,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         # ########## TONE ##########
 
-        mem.mode = self.MODES[_mem.wide]
+        mem.mode = self.MODES[_mem.fmdev]
         mem.power = POWER_LEVELS[int(_mem.power)]
 
         rs = RadioSettingValueList(B_LOCK_LIST,
@@ -556,25 +561,21 @@ class TH8600Radio(chirp_common.CloneModeRadio):
                                                   LIST_STEPS[_mem.step]))
         mem.extra.append(step)
 
-        scramble_value = _mem.scramble
-        if scramble_value >= 8:     # Looks like OFF is 0x0f ** CONFIRM
-            scramble_value = 0
-        scramble = RadioSetting("scramble", "Scramble",
-                                RadioSettingValueList(SCRAMBLE_LIST,
-                                                      SCRAMBLE_LIST[
-                                                          scramble_value]))
-        mem.extra.append(scramble)
-
         optsig = RadioSetting("signal", "Optional signaling",
                               RadioSettingValueList(
                                   OPTSIG_LIST,
                                   OPTSIG_LIST[_mem.signal]))
         mem.extra.append(optsig)
 
-        rs = RadioSetting("pttid", "PTT ID",
+        dtmfpttid = RadioSetting("dtmfpttid", "DTMF PTT ID",
                           RadioSettingValueList(PTTID_LIST,
-                                                PTTID_LIST[_mem.pttid]))
-        mem.extra.append(rs)
+                                                PTTID_LIST[_mem.dtmfpttid]))
+        mem.extra.append(dtmfpttid)
+
+        fivetonepttid = RadioSetting("fivetonepttid", "5 Tone PTT ID",
+                          RadioSettingValueList(PTTID_LIST,
+                                                PTTID_LIST[_mem.fivetonepttid]))
+        mem.extra.append(fivetonepttid)
 
         return mem
 
