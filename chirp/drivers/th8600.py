@@ -39,9 +39,9 @@ struct chns {
      b_lock:2         // off=00, sub=01, carrier=10
      REV:1
      TxInh:1;
-  u8 sqlmode:3     // SQ=000, CT=001, Tone=010, CT + Tone=011, CTC + Tone=100
+  u8 sqlmode:3     // SQ=000, CT=001, Tone=010, CT or Tone=011, CTC and Tone=100
      signal:2     // off=00, dtmf=01, 2-tone=10, 5-tone=11 
-     TBD: 1
+     displayName: 1
      talkoff: 1
      TBD: 1;
   u8 fivetonepttid: 2 //off=00, begin=01,end=10,both=11
@@ -122,8 +122,8 @@ def _rawsend(radio, data):
 def _make_read_frame(addr, length):
     frame = b"\xFE\xFE\xEE\xEF\xEB"
     """Pack the info in the header format"""
-    frame += bytes(f'{addr:x}'.zfill(4),'utf-8')
-    frame += bytes(f'{length:x}'.zfill(2),'utf-8')
+    frame += bytes(f'{addr:X}'.zfill(4),'utf-8')
+    frame += bytes(f'{length:X}'.zfill(2),'utf-8')
     frame += b"\xFD"
     print("addr:",addr,"length:",length,"FRAME:",frame)
     # Return the data
@@ -140,8 +140,13 @@ def _make_write_frame(addr, length, data=""):
         output += data
 
     frame += output
-    frame += _calculate_checksum(output)
-
+    """Unlike other TYT models, the frame header is not included in the checksum calc"""
+    converted_data = b''
+    for i in range(0, len(output), 2):
+        converted_data += int(output[i:i+2].decode('utf-8'),16).to_bytes(1,'big')
+    cs_byte = _calculate_checksum(converted_data)
+    calculated_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2),'utf-8')
+    frame += calculated_checksum
     frame += b"\xFD"
     # Return the data
     return frame
@@ -242,9 +247,17 @@ def _download(radio):
             LOG.warning("Incorrect start")
         if not d.endswith(b"\xFD"):
             LOG.warning("Incorrect end")
-        # could validate the block data with checksum
-        
-        # Aggregate the data
+        #validate the block data with checksum
+        protected_data = d[5:-4]
+        received_checksum = d[-4:-2]
+        converted_data = b''
+        for i in range(0, len(protected_data), 2):
+            converted_data += int(protected_data[i:i+2].decode('utf-8'),16).to_bytes(1,'big')
+        cs_byte = _calculate_checksum(converted_data)  #HEADER IS NOT INCLUDED IN CHECKSUM CALC, UNLIKE OTHER TYT MODELS
+        calculated_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2),'utf-8')
+        if received_checksum != calculated_checksum:
+            LOG.warning("Incorrect checksum received")
+        # Strip out header, addr, length, checksum, eof and then aggregate the remaining data
         ascii_data = d[11:-3]
         if len(ascii_data)%2 != 0:
             LOG.error("Invalid data length")
@@ -510,10 +523,15 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         mem.name = mem.name.rstrip()    # remove trailing spaces
 
         # ########## TONE ##########
-
-        if _mem.txtone > 2600:
+        dtcs_polarity = ['N','N']
+        if _mem.txtone == 0xFFF:
             # All off
             txmode = ""
+        elif _mem.txtone >= 0x8013:
+            # DTSC inverted when high bit is set - signed int
+            txmode = "DTCS"
+            mem.dtcs = int(format(int(_mem.txtone & 0x7F), 'o'))
+            dtcs_polarity[0] = "R"
         elif _mem.txtone > 511:
             txmode = "Tone"
             mem.rtone = int(_mem.txtone) / 10.0
@@ -521,19 +539,22 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             # DTSC
             txmode = "DTCS"
             mem.dtcs = int(format(int(_mem.txtone), 'o'))
-
-        if _mem.rxtone > 2600:
+            dtcs_polarity[0] = "N"
+        if _mem.rxtone == 0xFFF:
             rxmode = ""
+        elif _mem.rxtone >= 0x8013:
+            # DTSC inverted when high bit is set - signed int
+            txmode = "DTCS"
+            mem.dtcs = int(format(int(_mem.txtone & 0x7F), 'o'))
+            dtcs_polarity[1] = "R"
         elif _mem.rxtone > 511:
             rxmode = "Tone"
             mem.ctone = int(_mem.rxtone) / 10.0
         else:
             rxmode = "DTCS"
             mem.rx_dtcs = int(format(int(_mem.rxtone), 'o'))
-
-#        mem.dtcs_polarity = ("N", "R")[_mem.encodeDSCI] + (
-#                             "N", "R")[_mem.decodeDSCI]
-#                             "N", "R")[_mem.decodeDSCI]
+            dtcs_polarity[1] = "N"
+        mem.dtcs_polarity = "".join(dtcs_polarity)
 
         mem.tmode = ""
         if txmode == "Tone" and not rxmode:
@@ -598,8 +619,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         for i in range(6):   # 0 - 6
             _mem.name[i] = ord(out_name[i])
-        for i in range(10):
-            _name.extra_name[i] = ord(out_name[i+6])
 
         if mem.name != "":
             _mem.displayName = 1    # Name only displayed if this is set on
@@ -620,24 +639,20 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         elif mem.tmode == "Cross":
             txmode, rxmode = mem.cross_mode.split("->", 1)
 
-        if mem.dtcs_polarity[1] == "N":
-            _mem.decodeDSCI = 0
-        else:
-            _mem.decodeDSCI = 1
-
         if rxmode == "":
             _mem.rxtone = 0xFFF
         elif rxmode == "Tone":
             _mem.rxtone = int(float(mem.ctone) * 10)
         elif rxmode == "DTCSSQL":
-            _mem.rxtone = int(str(mem.dtcs), 8)
+            if mem.dtcs_polarity[0] == "N":
+                _mem.rxtone = int(str(mem.dtcs), 8)
+            else:
+                _mem.rxtone = int(str(mem.dtcs | 0x8000), 8)
         elif rxmode == "DTCS":
-            _mem.rxtone = int(str(mem.rx_dtcs), 8)
-
-        if mem.dtcs_polarity[0] == "N":
-            _mem.encodeDSCI = 0
-        else:
-            _mem.encodeDSCI = 1
+            if mem.dtcs_polarity[0] == "N":
+                _mem.rxtone = int(str(mem.dtcs), 8)
+            else:
+                _mem.rxtone = int(str(mem.dtcs | 0x8000), 8)
 
         if txmode == "":
             _mem.txtone = 0xFFF
@@ -646,9 +661,11 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         elif txmode == "TSQL":
             _mem.txtone = int(float(mem.ctone) * 10)
         elif txmode == "DTCS":
-            _mem.txtone = int(str(mem.dtcs), 8)
-
-        _mem.wide = self.MODES.index(mem.mode)
+            if mem.dtcs_polarity[1] == "N":
+                _mem.txtone = int(str(mem.dtcs), 8)
+            else:
+                _mem.txtone = int(str(mem.dtcs | 0x8000), 8)
+        _mem.fmdev = self.MODES.index(mem.mode)
         _mem.power = 0 if mem.power is None else POWER_LEVELS.index(mem.power)
 
         for element in mem.extra:
