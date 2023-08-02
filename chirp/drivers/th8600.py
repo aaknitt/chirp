@@ -52,6 +52,56 @@ struct chns {
 
 #seekto 0x0000;
 struct chns chan_mem[200];
+struct chns limit_mem[4];
+struct chns vfos[6];
+
+#seekto 0x1160;
+struct {
+  u8 introScreen1[12];    // 0x1160 *Intro Screen Line 1(truncated to 12 alpha
+                          //         text characters)
+  u8 unk_bit9 : 1,        // 0x116C
+     subDisplay : 2,      //   0b00 = OFF; 0b01 = frequency; 0b10 = voltage
+     unk_bit8 : 1,        //
+     sqlLevel : 4;        //        *OFF, 1-9
+  u8 beep : 1,            // 0x116D *OFF, On
+     burstFreq : 2,       //        1750,2100,1000,1450 Hz tone burst frequency
+     unkstr4: 4,          //
+     txChSelect : 1;      //        *Last CH, Main CH
+  u8 unk_bit7 : 1,        // 0x116E
+     autoPowOff : 2,      //        OFF, 30Min, 1HR, 2HR
+     tot : 5;             //        OFF, time in minutes (1 to 30)
+  u8 pttRelease: 2,       // 0x116F  OFF, Begin, After, Both
+     unk_bit6: 2,         //
+     sqlTailElim: 2,      //        OFF, Frequency, No Frequency
+     disableReset:1,      //        NO, YES
+     menuOperation:1;     //        NO, YES
+  u8 scanResumeTime : 2,  // 0x1170 2S, 5S, 10S, 15S
+     disMode : 2,         //        Frequency, Channel, Name
+     scanType: 2,         //        Time operated, Carrier operated, Se
+     ledMode: 2;          //        On, 5 second, 10 second
+  u8 unky;                // 0x1171
+  u8 usePowerOnPw : 1,    // 0x1172 NO, YES
+     elimTailNoTone: 1,   //        NO, YES
+     unk6 : 6;            //
+  u8 unk;                 // 0x1173
+  u8 unk_bit5 : 1,        // 0x1174 
+     mhzKeyFunc : 3,      //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+     unk_bit4 : 1,        //
+     lowKeyFunc : 3;      //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+  u8 unk_bit3 : 1,        // 0x1175 
+     mvKeyFunc : 3,       //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+     unk_bit2 : 1,        //
+     ctKeyFunc : 3;       //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+  u8 abKeyFunc : 3,       // 0x1176  A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+     unk_bit1 : 1,        //
+     volume : 4;          //         0 to 15
+  u8 unk3 : 3,            // 0x1177
+     introScreen : 2,     //      OFF, Picture, Character String
+     unk_bits : 3;        //
+  u8 unk4;                // 0x1178
+  u8 unk5;                // 0x1179
+  u8 powerOnPw[6];        // 0x117A  6 ASCII characters
+} basicsettings;
 
 #seekto 0x1180;
 struct {
@@ -63,6 +113,25 @@ struct {
   u8 bitmap[26];    // one bit for each channel skipped
 } chan_skip;
 
+#seekto 0x1680;
+ul32 rx_freq_limit_low_vhf;
+ul32 rx_freq_limit_high_vhf;
+ul32 tx_freq_limit_low_vhf;
+ul32 tx_freq_limit_high_vhf;
+ul32 rx_freq_limit_low_220;   //not actually supported by radio - always set to 0xFFFFFFFF
+ul32 rx_freq_limit_high_220;  //not actually supported by radio - always set to 0xFFFFFFFF
+ul32 tx_freq_limit_low_220;   //not actually supported by radio - always set to 0xFFFFFFFF
+ul32 tx_freq_limit_high_220;  //not actually supported by radio - always set to 0xFFFFFFFF
+ul32 rx_freq_limit_low_uhf;
+ul32 rx_freq_limit_high_uhf;
+ul32 tx_freq_limit_low_uhf;
+ul32 tx_freq_limit_high_uhf;
+
+#seekto 0x1940;
+struct {
+  u8 introLine1[16];    // 16 ASCII characters
+  u8 introLine2[16];    // 16 ASCII characters
+} intro_lines;
 """
 
 MEM_SIZE = 0x2400
@@ -74,13 +143,12 @@ BAUDRATE = 9600
 POWER_LEVELS = [chirp_common.PowerLevel("High", watts=25.00),
                 chirp_common.PowerLevel("Mid", watts=10.00),
                 chirp_common.PowerLevel("Low", watts=5.00)]
-
-SCRAMBLE_LIST = ["OFF", "1", "2", "3", "4", "5", "6", "7", "8"]
 B_LOCK_LIST = ["OFF", "Sub", "Carrier"]
 OPTSIG_LIST = ["OFF", "DTMF", "2TONE", "5TONE"]
 PTTID_LIST = ["Off", "BOT", "EOT", "Both"]
-STEPS = [2.5, 5.0, 6.25, 10.0, 12.5, 25.0, 50.0, 100.0]
+STEPS = [2.5, 5.0, 6.25, 7.5, 8.33, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0]
 LIST_STEPS = [str(x) for x in STEPS]
+
 
 
 def _clean_buffer(radio):
@@ -346,7 +414,6 @@ def _do_map(chn, sclr, mary):
             mapbit = 1
     return mapbit
 
-
 @directory.register
 class TH8600Radio(chirp_common.CloneModeRadio):
     """TYT UV88 Radio"""
@@ -360,6 +427,11 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     DTMF_CHARS = list("0123456789ABCD*#")
     # 136-174, 400-480
     VALID_BANDS = [(136000000, 174000000), (400000000, 480000000)]
+    SPECIAL_CHANS = ("L1", "U1",
+                 "L2", "U2",
+                 "VFOA_VHF", "VFOA_220", "VFOA_UHF",
+                 "VFOB_VHF", "VFOB_220", "VFOB_UHF"
+                )
 
     # Valid chars on the LCD
     VALID_CHARS = chirp_common.CHARSET_ALPHANUMERIC + \
@@ -389,8 +461,10 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         rf = chirp_common.RadioFeatures()
         rf.has_settings = True
         rf.has_bank = False
+        rf.has_bank_index = False
+        rf.has_bank_names = False
         rf.has_comment = False
-        rf.has_tuning_step = False      # Not as chan feature
+        rf.has_tuning_step = True
         rf.valid_tuning_steps = STEPS
         rf.can_odd_split = True
         rf.has_name = True
@@ -402,6 +476,9 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         rf.has_ctone = True
         rf.has_cross = True
         rf.has_sub_devices = False
+        rf.has_infinite_number = False
+        rf.has_nostep_tuning = False
+        rf.has_variable_power = False
         rf.valid_name_length = self.NAME_LENGTH
         rf.valid_modes = self.MODES
         rf.valid_characters = self.VALID_CHARS
@@ -412,10 +489,10 @@ class TH8600Radio(chirp_common.CloneModeRadio):
                                 "DTCS->DTCS"]
         rf.valid_skips = []
         rf.valid_power_levels = POWER_LEVELS
-        rf.valid_dtcs_codes = chirp_common.ALL_DTCS_CODES  # this is just to
-        # get it working, not sure this is right
+        rf.valid_dtcs_codes = chirp_common.DTCS_CODES
         rf.valid_bands = self.VALID_BANDS
-        rf.memory_bounds = (1, 199)
+        rf.valid_special_chans = self.SPECIAL_CHANS
+        rf.memory_bounds = (1, 200)
         rf.valid_skips = ["", "S"]
         return rf
 
@@ -676,119 +753,127 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     def get_settings(self):
         """Translate the MEM_FORMAT structs into setstuf in the UI"""
         _settings = self._memobj.basicsettings
-        _settings2 = self._memobj.settings2
-        _workmode = self._memobj.workmodesettings
+        #_settings2 = self._memobj.settings2
+        #_workmode = self._memobj.workmodesettings
 
         basic = RadioSettingGroup("basic", "Basic Settings")
         group = RadioSettings(basic)
 
-        # Menu 02 - TX Channel Select
+        # Display Mode
+        options = ['Frequency', 'Channel #', 'Name']
+        rx = RadioSettingValueList(options, options[_settings.disMode])
+        rset = RadioSetting("basicsettings.disMode", "Display Mode", rx)
+        basic.append(rset)
+
+        # Subscreen Mode
+        options = ['Off', 'Frequency', 'Voltage']
+        rx = RadioSettingValueList(options, options[_settings.subDisplay])
+        rset = RadioSetting("basicsettings.subDisplay", "Subscreen Mode", rx)
+        basic.append(rset)
+
+        # Squelch Level
+        options = ["OFF"] + ["%s" % x for x in range(1, 10)]
+        rx = RadioSettingValueList(options, options[_settings.sqlLevel])
+        rset = RadioSetting("basicsettings.sqlLevel", "Squelch Level", rx)
+        basic.append(rset)
+
+        # Tone Burst Frequency
+        options = ['1750', '2100', '1000', '1450']
+        rx = RadioSettingValueList(options, options[_settings.burstFreq])
+        rset = RadioSetting("basicsettings.burstFreq", "Tone Burst Frequency (Hz)", rx)
+        basic.append(rset)
+
+        # PTT Release
+        options = ['Off', 'Begin', 'End', 'Both']
+        rx = RadioSettingValueList(options, options[_settings.pttRelease])
+        rset = RadioSetting("basicsettings.pttRelease", "PTT Release", rx)
+        basic.append(rset)
+
+        # TX Channel Select
         options = ["Last Channel", "Main Channel"]
         rx = RadioSettingValueList(options, options[_settings.txChSelect])
         rset = RadioSetting("basicsettings.txChSelect",
                             "Priority Transmit", rx)
         basic.append(rset)
 
-        # Menu 03 - VOX Level
-        rx = RadioSettingValueInteger(1, 7, _settings.voxLevel + 1)
-        rset = RadioSetting("basicsettings.voxLevel", "Vox Level", rx)
-        basic.append(rset)
-
-        # Menu 05 - Squelch Level
-        options = ["OFF"] + ["%s" % x for x in range(1, 10)]
-        rx = RadioSettingValueList(options, options[_settings.sqlLevel])
-        rset = RadioSetting("basicsettings.sqlLevel", "Squelch Level", rx)
-        basic.append(rset)
-
-        # Menu 06 - Dual Wait
-        rx = RadioSettingValueBoolean(_settings.dualWait)
-        rset = RadioSetting("basicsettings.dualWait", "Dual Wait/Standby", rx)
-        basic.append(rset)
-
-        # Menu 07 - LED Mode
-        options = ["Off", "On", "Auto"]
+        # LED Mode
+        options = ["On", "5 Second", "10 Second"]
         rx = RadioSettingValueList(options, options[_settings.ledMode])
         rset = RadioSetting("basicsettings.ledMode", "LED Display Mode", rx)
         basic.append(rset)
 
-        # Menu 08 - Light
-        options = ["%s" % x for x in range(1, 8)]
-        rx = RadioSettingValueList(options, options[_settings.light])
-        rset = RadioSetting("basicsettings.light",
-                            "Background Light Color", rx)
+        # Scan Type
+        options = ["TO", "CO", "SE"]
+        rx = RadioSettingValueList(options, options[_settings.scanType])
+        rset = RadioSetting("basicsettings.scanType", "Scan Type", rx)
         basic.append(rset)
 
-        # Menu 09 - Beep
-        rx = RadioSettingValueBoolean(_settings.beep)
-        rset = RadioSetting("basicsettings.beep", "Keypad Beep", rx)
+        # Resume Time
+        options = ["2 seconds", "5 seconds", "10 seconds", "15 seconds"]
+        rx = RadioSettingValueList(options, options[_settings.scanResumeTime])
+        rset = RadioSetting("basicsettings.scanResumeTime", "Scan Resume Time", rx)
         basic.append(rset)
 
-        # Menu 11 - TOT
-        options = ["Off"] + ["%s seconds" % x for x in range(30, 300, 30)]
+        # Tail Elim
+        options = ["Off", "Frequency", "No Frequency"]
+        rx = RadioSettingValueList(options, options[_settings.sqlTailElim])
+        rset = RadioSetting("basicsettings.sqlTailElim", "Sql Tail Elim", rx)
+        basic.append(rset)
+
+        # Auto Power Off
+        options = ["Off", "30 minute", "60 minute", "120 minute"]
+        rx = RadioSettingValueList(options, options[_settings.autoPowOff])
+        rset = RadioSetting("basicsettings.autoPowOff", "Auto Power Off", rx)
+        basic.append(rset)
+
+        # TOT
+        options = ["Off"] + ["%s minutes" % x for x in range(1, 31, 1)]
         rx = RadioSettingValueList(options, options[_settings.tot])
         rset = RadioSetting("basicsettings.tot",
                             "Transmission Time-out Timer", rx)
         basic.append(rset)
 
-        # Menu 13 - VOX Switch
-        rx = RadioSettingValueBoolean(_settings.voxSw)
-        rset = RadioSetting("basicsettings.voxSw", "Vox Switch", rx)
+        # Beep
+        rx = RadioSettingValueBoolean(_settings.beep)
+        rset = RadioSetting("basicsettings.beep", "Keypad Beep", rx)
         basic.append(rset)
 
-        # Menu 14 - Roger
-        rx = RadioSettingValueBoolean(_settings.roger)
-        rset = RadioSetting("basicsettings.roger", "Roger Beep", rx)
+        # Volume
+        options = ["%s" % x for x in range(0, 16)]
+        rx = RadioSettingValueList(options, options[_settings.volume])
+        rset = RadioSetting("basicsettings.volume",
+                            "Volume", rx)
         basic.append(rset)
 
-        # Menu 16 - Save Mode
-        options = ["Off", "1:1", "1:2", "1:4"]
-        rx = RadioSettingValueList(options, options[_settings.saveMode])
-        rset = RadioSetting("basicsettings.saveMode", "Battery Save Mode", rx)
+        # Require Power On Password
+        rx = RadioSettingValueBoolean(_settings.usePowerOnPw)
+        rset = RadioSetting("basicsettings.usePowerOnPw", "Require Power On Password", rx)
         basic.append(rset)
 
-        # Menu 17 - Scan Type
-        if self.MODEL == "QRZ-1":
-            options = ["Time", "Carrier", "Stop"]
-        else:
-            options = ["TO", "CO", "SE"]
-        rx = RadioSettingValueList(options, options[_settings.scanType])
-        rset = RadioSetting("basicsettings.scanType", "Scan Type", rx)
+        # Power On Password Value
+        name = ""
+        for i in range(6):  # 0 - 15
+            char = chr(int(_settings.powerOnPw[i]))
+            if char == "\x00":
+                char = " "  # Other software may have 0x00 mid-name
+            name += char
+        name = name.rstrip()  # remove trailing spaces
+        rx = RadioSettingValueString(0, 6, name)
+        rset = RadioSetting("basicsettings.powerOnPw", "Power On Password", rx)
         basic.append(rset)
 
-        # Menu 18 - Key Lock
-        rx = RadioSettingValueBoolean(_settings.keylock)
-        rset = RadioSetting("basicsettings.keylock", "Auto Key Lock", rx)
-        basic.append(rset)
-
-        if self.MODEL != "QRZ-1":
-            # Menu 19 - SW Audio
-            rx = RadioSettingValueBoolean(_settings.swAudio)
-            rset = RadioSetting("basicsettings.swAudio", "Voice Prompts", rx)
-            basic.append(rset)
 
         # Menu 20 - Intro Screen
-        options = ["Off", "Voltage", "Character String"]
+        options = ["Off", "Image", "Character String"]
         rx = RadioSettingValueList(options, options[_settings.introScreen])
         rset = RadioSetting("basicsettings.introScreen", "Intro Screen", rx)
         basic.append(rset)
 
-        # Menu 32 - Key Mode
-        options = ["ALL", "PTT", "KEY", "Key & Side Key"]
-        rx = RadioSettingValueList(options, options[_settings.keyMode])
-        rset = RadioSetting("basicsettings.keyMode", "Key Lock Mode", rx)
+        #Menu Operation
+        rx = RadioSettingValueBoolean(_settings.menuOperation)
+        rset = RadioSetting("basicsettings.menuOperation", "Menu Operation", rx)
         basic.append(rset)
-
-        # Menu 33 - Display Mode
-        options = ['Frequency', 'Channel #', 'Name']
-        rx = RadioSettingValueList(options, options[_settings.disMode])
-        rset = RadioSetting("basicsettings.disMode", "Display Mode", rx)
-        basic.append(rset)
-
-        # Menu 34 - FM Dual Wait
-        rx = RadioSettingValueBoolean(_settings.radioMoni)
-        rset = RadioSetting("basicsettings.radioMoni", "Radio Monitor", rx)
-        basic.append(rset)
-
+        '''
         advanced = RadioSettingGroup("advanced", "Advanced Settings")
         group.append(advanced)
 
@@ -823,60 +908,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         rx = RadioSettingValueString(0, 15, name)
         rset = RadioSetting("openradioname.name2", "Intro Line 2", rx)
         advanced.append(rset)
-
-        # software only
-        options = ['0.5S', '1.0S', '1.5S', '2.0S', '2.5S', '3.0S', '3.5S',
-                   '4.0S', '4.5S', '5.0S']
-        rx = RadioSettingValueList(options, options[_settings.voxDelay])
-        rset = RadioSetting("basicsettings.voxDelay", "VOX Delay", rx)
-        advanced.append(rset)
-
-        options = ['Unlocked', 'Unknown 1', 'Unknown 2', 'EU', 'US']
-        # extend option list with unknown description for values 5 - 15.
-        for ix in range(len(options), _settings2.region + 1):
-            item_to_add = 'Unknown {region_code}'.format(region_code=ix)
-            options.append(item_to_add)
-        # log unknown region codes greater than 4
-        if _settings2.region > 4:
-            LOG.debug("Unknown region code: {value}".
-                      format(value=_settings2.region))
-        rx = RadioSettingValueList(options, options[_settings2.region])
-        rx.set_mutable(False)
-        rset = RadioSetting("settings2.region", "Region", rx)
-        advanced.append(rset)
-
-        workmode = RadioSettingGroup("workmode", "Work Mode Settings")
-        group.append(workmode)
-
-        # Toggle with [#] key
-        options = ["Frequency", "Channel"]
-        rx = RadioSettingValueList(options, options[_workmode.vfomrmode])
-        rset = RadioSetting("workmodesettings.vfomrmode", "VFO/MR Mode", rx)
-        workmode.append(rset)
-
-        # Toggle with [#] key
-        options = ["Frequency", "Channel"]
-        rx = RadioSettingValueList(options, options[_workmode.vfomrmodeb])
-        rset = RadioSetting("workmodesettings.vfomrmodeb",
-                            "VFO/MR Mode B (BQ1.41+)", rx)
-        workmode.append(rset)
-
-        # Toggle with [A/B] key
-        options = ["B", "A"]
-        rx = RadioSettingValueList(options, options[_workmode.ab])
-        rset = RadioSetting("workmodesettings.ab", "A/B Select", rx)
-        workmode.append(rset)
-
-        rx = RadioSettingValueInteger(1, 199, _workmode.mrAch + 1)
-        rset = RadioSetting("workmodesettings.mrAch", "MR A Channel #", rx)
-        workmode.append(rset)
-
-        rx = RadioSettingValueInteger(1, 199, _workmode.mrBch + 1)
-        rset = RadioSetting("workmodesettings.mrBch", "MR B Channel #", rx)
-        workmode.append(rset)
-
-        fmb = RadioSettingGroup("fmradioc", "FM Radio Settings")
-        group.append(fmb)
+        '''
 
         def myset_mask(setting, obj, atrb, nx):
             if bool(setting.value):     # Enabled = 1
@@ -886,61 +918,11 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             _do_map(nx + 1, vx, self._memobj.fmmap.fmset)
             return
 
-        def myset_fmfrq(setting, obj, atrb, nx):
-            """ Callback to set xx.x FM freq in memory as xx.x * 100000"""
-            # in-valid even KHz freqs are allowed; to satisfy run_tests
-            vx = float(str(setting.value))
-            vx = int(vx * 100000)
-            setattr(obj[nx], atrb, vx)
-            return
-
         def myset_freq(setting, obj, atrb, mult):
             """ Callback to set frequency by applying multiplier"""
             value = int(float(str(setting.value)) * mult)
             setattr(obj, atrb, value)
             return
-
-        _fmx = self._memobj.fmfrqs
-
-        # FM Broadcast Manual Settings
-        val = _fmx.fmcur
-        val = val / 100000.0
-        if val < 64.0 or val > 108.0:
-            val = 100.7
-        rx = RadioSettingValueFloat(64.0, 108.0, val, 0.1, 1)
-        rset = RadioSetting("fmfrqs.fmcur", "Manual FM Freq (MHz)", rx)
-        rset.set_apply_callback(myset_freq, _fmx, "fmcur", 100000)
-        fmb.append(rset)
-
-        _fmfrq = self._memobj.fm_stations
-        _fmap = self._memobj.fmmap
-
-        # FM Broadcast Presets Settings
-        for j in range(0, 24):
-            val = _fmfrq[j].rxfreq
-            if val < 6400000 or val > 10800000:
-                val = 88.0
-                fmset = False
-            else:
-                val = (float(int(val)) / 100000)
-                # get fmmap bit value: 1 = enabled
-                ndx = int(math.floor((j) / 8))
-                bv = j % 8
-                msk = 1 << bv
-                vx = _fmap.fmset[ndx]
-                fmset = bool(vx & msk)
-            rx = RadioSettingValueBoolean(fmset)
-            rset = RadioSetting("fmmap.fmset/%d" % j,
-                                "FM Preset %02d" % (j + 1), rx)
-            rset.set_apply_callback(myset_mask, _fmap, "fmset", j)
-            fmb.append(rset)
-
-            rx = RadioSettingValueFloat(64.0, 108.0, val, 0.1, 1)
-            rset = RadioSetting("fm_stations/%d.rxfreq" % j,
-                                "    Preset %02d Freq" % (j + 1), rx)
-            # This callback uses the array index
-            rset.set_apply_callback(myset_fmfrq, _fmfrq, "rxfreq", j)
-            fmb.append(rset)
 
         return group       # END get_settings()
 
