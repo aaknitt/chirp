@@ -34,26 +34,35 @@ struct chns {
   ul16 rxtone;
   ul16 txtone;
   
-  u8 power:2       // High=00,Mid=01,Low=10
-     fmdev:2       // wide=00, mid=01, narrow=10
+  u8 power:2          // High=00,Mid=01,Low=10
+     mode:2          //  WFM=00, FM=01, NFM=10
      b_lock:2         // off=00, sub=01, carrier=10
      REV:1
      TxInh:1;
-  u8 sqlmode:3     // SQ=000, CT=001, Tone=010, CT or Tone=011, CTC and Tone=100
-     signal:2     // off=00, dtmf=01, 2-tone=10, 5-tone=11 
-     displayName: 1
+  u8 sqlmode:3         // SQ=000, CT=001, Tone=010, CT or Tone=011, CTC and Tone=100
+     signal:2          // off=00, dtmf=01, 2-tone=10, 5-tone=11 
+     display: 1
      talkoff: 1
      TBD: 1;
-  u8 fivetonepttid: 2 //off=00, begin=01,end=10,both=11
-     dtmfpttid: 2  //off=00, begin=01,end=10,both=11
-     step: 4;       //
+  u8 fivetonepttid: 2  //off=00, begin=01,end=10,both=11
+     dtmfpttid: 2      //off=00, begin=01,end=10,both=11
+     tuning_step: 4;   //
   u8 name[6];
 };
 
+struct chname {
+  u8  extra_name[10];
+};
+
+
+
 #seekto 0x0000;
 struct chns chan_mem[200];
-struct chns limit_mem[4];
+struct chns scanlimits[4];
 struct chns vfos[6];
+
+#seekto 0x1960;
+struct chname chan_name[200];
 
 #seekto 0x1160;
 struct {
@@ -85,11 +94,11 @@ struct {
      unk6 : 6;            //
   u8 unk;                 // 0x1173
   u8 unk_bit5 : 1,        // 0x1174 
-     mhzKeyFunc : 3,      //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+     mzKeyFunc : 3,      //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
      unk_bit4 : 1,        //
      lowKeyFunc : 3;      //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
   u8 unk_bit3 : 1,        // 0x1175 
-     mvKeyFunc : 3,       //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
+     vmKeyFunc : 3,       //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
      unk_bit2 : 1,        //
      ctKeyFunc : 3;       //   A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
   u8 abKeyFunc : 3,       // 0x1176  A/B, Low, Monitor, Scan, Tone, M/V, MHz, Mute
@@ -148,7 +157,11 @@ OPTSIG_LIST = ["OFF", "DTMF", "2TONE", "5TONE"]
 PTTID_LIST = ["Off", "BOT", "EOT", "Both"]
 STEPS = [2.5, 5.0, 6.25, 7.5, 8.33, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0]
 LIST_STEPS = [str(x) for x in STEPS]
-
+SPECIAL_CHANS = ("L1", "U1",
+             "L2", "U2",
+             "VFOA_VHF", "VFOA_220", "VFOA_UHF",
+             "VFOB_VHF", "VFOB_220", "VFOB_UHF"
+            )
 
 
 def _clean_buffer(radio):
@@ -200,21 +213,25 @@ def _make_read_frame(addr, length):
 
 def _make_write_frame(addr, length, data=""):
     frame = b"\xFE\xFE\xEE\xEF\xE4"
-
+    print("_make_write_frame addr:",addr,"length:",length,"data:",data.hex())
     """Pack the info in the header format"""
-    output = struct.pack(">IH", addr, length)
+    output = struct.pack(">HB", addr, length)
+    print("output: ",output.hex(), output)
     # Add the data if set
     if len(data) != 0:
         output += data
-
-    frame += output
-    """Unlike other TYT models, the frame header is not included in the checksum calc"""
+    print("output2: ",output.hex(), output)
+    # Convert to ASCII
     converted_data = b''
-    for i in range(0, len(output), 2):
-        converted_data += int(output[i:i+2].decode('utf-8'),16).to_bytes(1,'big')
-    cs_byte = _calculate_checksum(converted_data)
-    calculated_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2),'utf-8')
-    frame += calculated_checksum
+    for b in output:
+        converted_data += bytes(f'{b:X}'.zfill(2),'utf-8')
+    frame += converted_data
+    print("frame: ",frame.hex())
+    """Unlike other TYT models, the frame header is not included in the checksum calc"""
+    cs_byte = _calculate_checksum(data)
+    converted_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2),'utf-8')
+    print("cs_byte: ", cs_byte, "converted_checksum: ", converted_checksum)
+    frame += converted_checksum
     frame += b"\xFD"
     # Return the data
     return frame
@@ -416,22 +433,19 @@ def _do_map(chn, sclr, mary):
 
 @directory.register
 class TH8600Radio(chirp_common.CloneModeRadio):
-    """TYT UV88 Radio"""
+    """TYT TH8600 Radio"""
+
     VENDOR = "TYT"
     MODEL = "TH-8600"
     NEEDS_COMPAT_SERIAL = False
     MODES = ['WFM', 'FM', 'NFM']
     TONES = chirp_common.TONES
     DTCS_CODES = chirp_common.DTCS_CODES
-    NAME_LENGTH = 10
+    NAME_LENGTH = 6
     DTMF_CHARS = list("0123456789ABCD*#")
     # 136-174, 400-480
     VALID_BANDS = [(136000000, 174000000), (400000000, 480000000)]
-    SPECIAL_CHANS = ("L1", "U1",
-                 "L2", "U2",
-                 "VFOA_VHF", "VFOA_220", "VFOA_UHF",
-                 "VFOB_VHF", "VFOB_220", "VFOB_UHF"
-                )
+
 
     # Valid chars on the LCD
     VALID_CHARS = chirp_common.CHARSET_ALPHANUMERIC + \
@@ -491,7 +505,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         rf.valid_power_levels = POWER_LEVELS
         rf.valid_dtcs_codes = chirp_common.DTCS_CODES
         rf.valid_bands = self.VALID_BANDS
-        rf.valid_special_chans = self.SPECIAL_CHANS
+        rf.valid_special_chans = SPECIAL_CHANS
         rf.memory_bounds = (1, 200)
         rf.valid_skips = ["", "S"]
         return rf
@@ -527,7 +541,13 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     def process_mmap(self):
         """Process the mem map into the mem object"""
         self._memobj = bitwise.parse(MEM_FORMAT, self._mmap)
-
+    '''
+    def process_mmap(self):
+        self._memobj = bitwise.parse(
+            TH8600_MEM_FORMAT %
+            (self._mmap_offset, self._scanlimits_offset, self._settings_offset,
+             self._chan_active_offset, self._info_offset), self._mmap)
+    '''
     def get_raw_memory(self, number):
         return repr(self._memobj.memory[number - 1])
 
@@ -535,7 +555,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         """A value in a UI column for chan 'number' has been modified."""
         # update all raw channel memory values (_mem) from UI (mem)
         _mem = self._memobj.chan_mem[memory.number - 1]
-        _name = self._memobj.chan_mem[memory.number - 1].name
+        _name = self._memobj.chan_name[memory.number - 1]
 
         if memory.empty:
             _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
@@ -551,22 +571,61 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         return self._set_memory(memory, _mem, _name)
 
     def get_memory(self, number):
-        # radio first channel is 1, mem map is base 0
-        _mem = self._memobj.chan_mem[number - 1]
-        _name = self._memobj.chan_mem[number - 1].name
+        
         mem = chirp_common.Memory()
         mem.number = number
-
-        # Determine if channel is empty
-
-        if _do_map(number, 2, self._memobj.chan_avail.bitmap) == 0:
-            mem.empty = True
-            return mem
-
-        if _do_map(mem.number, 2, self._memobj.chan_skip.bitmap) > 0:
-            mem.skip = ""
+        
+        # Get a low-level memory object mapped to the image
+        if isinstance(number, int) and number < 0:
+            number = SPECIAL_CHANS[number + 10]
+        if isinstance(number, str):
+            #mem.number = -10 + SPECIAL_CHANS.index(number)
+            mem.number = number
+            if number == 'L1':
+                _mem = self._memobj.scanlimits[0]
+                _name = None
+            elif number == 'U1':
+                _mem = self._memobj.scanlimits[1]
+                _name = None
+            elif number == 'L2':
+                _mem = self._memobj.scanlimits[2]
+                _name = None
+            elif number == 'U2':
+                _mem = self._memobj.scanlimits[3]
+                _name = None
+            elif number == 'VFOA_VHF':
+                _mem = self._memobj.vfos[0]
+                _name = None
+            elif number == 'VFOB_VHF':
+                _mem = self._memobj.vfos[3]
+                _name = None
+            elif number == 'VFOA_UHF':
+                _mem = self._memobj.vfos[2]
+                _name = None
+            elif number == 'VFOB_UHF':
+                _mem = self._memobj.vfos[5]
+                _name = None
+            elif number == 'VFOA_220':
+                _mem = self._memobj.vfos[1]
+                _name = None
+            elif number == 'VFOB_220':
+                _mem = self._memobj.vfos[4]
+                _name = None
         else:
-            mem.skip = "S"
+            mem.number = number # Set the memory number
+            # radio first channel is 1, mem map is base 0
+            _mem = self._memobj.chan_mem[number - 1]
+            _name = self._memobj.chan_name[number - 1]
+            # Determine if channel is empty
+
+            if _do_map(number, 2, self._memobj.chan_avail.bitmap) == 0:
+                mem.empty = True
+                return mem
+
+            if _do_map(mem.number, 2, self._memobj.chan_skip.bitmap) > 0:
+                mem.skip = ""
+            else:
+                mem.skip = "S"
 
         return self._get_memory(mem, _mem, _name)
 
@@ -596,8 +655,13 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         mem.name = ""
         for i in range(6):   # 0 - 6
             mem.name += chr(_mem.name[i])
+        if _name:
+            for i in range(10):
+                mem.name += chr(_name.extra_name[i])
 
         mem.name = mem.name.rstrip()    # remove trailing spaces
+
+        mem.tuning_step = STEPS[_mem.tuning_step]
 
         # ########## TONE ##########
         dtcs_polarity = ['N','N']
@@ -646,7 +710,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         # ########## TONE ##########
 
-        mem.mode = self.MODES[_mem.fmdev]
+        mem.mode = self.MODES[_mem.mode]
         mem.power = POWER_LEVELS[int(_mem.power)]
 
         rs = RadioSettingValueList(B_LOCK_LIST,
@@ -654,11 +718,12 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         b_lock = RadioSetting("b_lock", "B_Lock", rs)
         mem.extra.append(b_lock)
 
+        '''
         step = RadioSetting("step", "Step",
                             RadioSettingValueList(LIST_STEPS,
                                                   LIST_STEPS[_mem.step]))
         mem.extra.append(step)
-
+        '''
         optsig = RadioSetting("signal", "Optional signaling",
                               RadioSettingValueList(
                                   OPTSIG_LIST,
@@ -681,6 +746,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         # """Convert UI column data (mem) into MEM_FORMAT memory (_mem)."""
 
         _mem.rxfreq = mem.freq / 10
+        _mem.tuning_step = STEPS.index(mem.tuning_step)
         if mem.duplex == "off":
             _mem.txfreq = 0xFFFFFFFF
         elif mem.duplex == "split":
@@ -696,11 +762,15 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         for i in range(6):   # 0 - 6
             _mem.name[i] = ord(out_name[i])
+        for i in range(10):
+            _name.extra_name[i] = ord(out_name[i+6])
 
-        if mem.name != "":
-            _mem.displayName = 1    # Name only displayed if this is set on
+         # autoset display to name if filled, else show frequency
+        if mem.name != "      ":
+            _mem.display = True
+            print("SHOULD SET DISPLAY BIT HERE")
         else:
-            _mem.displayName = 0
+            _mem.display = False
 
         rxmode = ""
         txmode = ""
@@ -742,7 +812,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
                 _mem.txtone = int(str(mem.dtcs), 8)
             else:
                 _mem.txtone = int(str(mem.dtcs | 0x8000), 8)
-        _mem.fmdev = self.MODES.index(mem.mode)
+        _mem.mode = self.MODES.index(mem.mode)
         _mem.power = 0 if mem.power is None else POWER_LEVELS.index(mem.power)
 
         for element in mem.extra:
@@ -851,27 +921,68 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         basic.append(rset)
 
         # Power On Password Value
-        name = ""
-        for i in range(6):  # 0 - 15
-            char = chr(int(_settings.powerOnPw[i]))
-            if char == "\x00":
-                char = " "  # Other software may have 0x00 mid-name
-            name += char
-        name = name.rstrip()  # remove trailing spaces
-        rx = RadioSettingValueString(0, 6, name)
+        pwdigits = ""
+        for i in range(6):  # 0 - 6
+            char = chr(_settings.powerOnPw[i])
+            pwdigits += char
+        rx = RadioSettingValueString(0, 6, pwdigits)
         rset = RadioSetting("basicsettings.powerOnPw", "Power On Password", rx)
         basic.append(rset)
 
 
-        # Menu 20 - Intro Screen
+        # Intro Screen
+        '''
+        #disabling since the memory map for this is still a bit ambigiuous 
         options = ["Off", "Image", "Character String"]
         rx = RadioSettingValueList(options, options[_settings.introScreen])
         rset = RadioSetting("basicsettings.introScreen", "Intro Screen", rx)
+        basic.append(rset)
+        '''
+
+        key_options = ["A/B", "Low", "Monitor", "Scan", "Tone", "M/V", "MHz", "Mute"]
+        # LO key function
+        options = key_options
+        rx = RadioSettingValueList(options, options[_settings.lowKeyFunc])
+        rset = RadioSetting("basicsettings.lowKeyFunc", "LO Key Function", rx)
+        basic.append(rset)
+
+        # Mz key function
+        options = key_options
+        rx = RadioSettingValueList(options, options[_settings.mzKeyFunc])
+        rset = RadioSetting("basicsettings.mzKeyFunc", "Mz Key Function", rx)
+        basic.append(rset)
+
+        # CT key function
+        options = key_options
+        rx = RadioSettingValueList(options, options[_settings.ctKeyFunc])
+        rset = RadioSetting("basicsettings.ctKeyFunc", "CT Key Function", rx)
+        basic.append(rset)
+
+        # V/M key function
+        options = key_options
+        rx = RadioSettingValueList(options, options[_settings.vmKeyFunc])
+        rset = RadioSetting("basicsettings.vmKeyFunc", "V/M Key Function", rx)
+        basic.append(rset)
+
+        # A/B key function
+        options = key_options
+        rx = RadioSettingValueList(options, options[_settings.abKeyFunc])
+        rset = RadioSetting("basicsettings.abKeyFunc", "A/B Key Function", rx)
         basic.append(rset)
 
         #Menu Operation
         rx = RadioSettingValueBoolean(_settings.menuOperation)
         rset = RadioSetting("basicsettings.menuOperation", "Menu Operation", rx)
+        basic.append(rset)
+
+        #SQ tail elim with no tone option
+        rx = RadioSettingValueBoolean(_settings.elimTailNoTone)
+        rset = RadioSetting("basicsettings.elimTailNoTone", "Eliminate Squelch Tail When No CT/DCS Signalling", rx)
+        basic.append(rset)
+
+        #Disable Reset Option
+        rx = RadioSettingValueBoolean(_settings.disableReset)
+        rset = RadioSetting("basicsettings.disableReset", "Disable Reset", rx)
         basic.append(rset)
         '''
         advanced = RadioSettingGroup("advanced", "Advanced Settings")
@@ -927,6 +1038,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         return group       # END get_settings()
 
     def set_settings(self, settings):
+        print("set_settings called HERE")
         _settings = self._memobj.basicsettings
         _mem = self._memobj
         for element in settings:
@@ -950,14 +1062,15 @@ class TH8600Radio(chirp_common.CloneModeRadio):
                     else:
                         obj = _settings
                         setting = element.get_name()
-
                     if element.has_apply_callback():
                         LOG.debug("Using apply callback")
                         element.run_apply_callback()
-                    elif setting == "mrAch" or setting == "mrBch":
-                        setattr(obj, setting, int(element.value) - 1)
-                    elif setting == "voxLevel":
-                        setattr(obj, setting, int(element.value) - 1)
+                    elif setting == "powerOnPw":
+                        temp = []
+                        for c in element.value:
+                            temp.append(ord(c))
+                        LOG.debug("Setting %s = %s" % (setting, element.value))
+                        setattr(obj, setting, temp)
                     elif element.value.get_mutable():
                         LOG.debug("Setting %s = %s" % (setting, element.value))
                         setattr(obj, setting, element.value)
