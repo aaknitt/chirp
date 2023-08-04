@@ -699,13 +699,14 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         # ########## TONE ##########
         dtcs_polarity = ['N', 'N']
+        print("in _get_memory and _mem.txtone is ",_mem.txtone)
         if _mem.txtone == 0xFFF:
             # All off
             txmode = ""
         elif _mem.txtone >= 0x8000:
             # DTSC inverted when high bit is set - signed int
             txmode = "DTCS"
-            mem.dtcs = int(format(int(_mem.txtone & 0x7F), 'o'))
+            mem.dtcs = int(format(int(_mem.txtone & 0x7FFF), 'o'))
             dtcs_polarity[0] = "R"
         elif _mem.txtone > 500:
             txmode = "Tone"
@@ -715,13 +716,13 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             txmode = "DTCS"
             mem.dtcs = int(format(int(_mem.txtone), 'o'))
             dtcs_polarity[0] = "N"
-
+        print("in _get_memory and _mem.rxtone is ",_mem.rxtone)
         if _mem.rxtone == 0xFFF:
             rxmode = ""
         elif _mem.rxtone >= 0x8000:
-            # DTSC inverted when high bit is set - signed int
+            # DTSC inverted when high bit is set
             rxmode = "DTCS"
-            mem.rx_dtcs = int(format(int(_mem.rxtone & 0x7F), 'o'))
+            mem.rx_dtcs = int(format(int(_mem.rxtone & 0x7FFF), 'o'))
             dtcs_polarity[1] = "R"
         elif _mem.rxtone > 500:
             rxmode = "Tone"
@@ -739,10 +740,13 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             mem.tmode = "TSQL"
         elif txmode == rxmode and txmode == "DTCS" and mem.dtcs == mem.rx_dtcs:
             mem.tmode = "DTCS"
+            mem.rx_dtcs = mem.dtcs
+            dtcs_polarity[1] = dtcs_polarity[0]
         elif rxmode or txmode:
             mem.tmode = "Cross"
             mem.cross_mode = "%s->%s" % (txmode, rxmode)
-
+        print("done with tone stuff in _get_memory")
+        print("tmode is ",mem.tmode, " ", mem.cross_mode, " mem.rx_dtcs is ",mem.rx_dtcs, " mem.dtcs is ", mem.dtcs)
         # ########## TONE ##########
 
         mem.mode = self.MODES[_mem.mode]
@@ -799,45 +803,66 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             _mem.display = True
         else:
             _mem.display = False
-
+        print("in set_memory and mem.dtcs_polarity is ",mem.dtcs_polarity)
+        print("in set_memory and mem.tmode is ",mem.tmode)
         rxmode = ""
         txmode = ""
         sql_mode = "SQ"
-
-        if mem.tmode == "Tone":
+        if mem.tmode == "":
+           sql_mode = "SQ"
+           _mem.rxtone = 0xFFF
+           _mem.txtone = 0xFFF
+        elif mem.tmode == "Tone":
             txmode = "Tone"
+            sql_mode = "SQ"
+            _mem.txtone = int(float(mem.rtone) * 10)
+            _mem.rxtone = 0xFFF
         elif mem.tmode == "TSQL":
             rxmode = "Tone"
             txmode = "TSQL"
+            sql_mode = "CT"
+            _mem.rxtone = int(float(mem.ctone) * 10)
+            _mem.txtone = int(float(mem.ctone) * 10)
         elif mem.tmode == "DTCS":
             rxmode = "DTCS"
             txmode = "DTCS"
-        elif mem.tmode == "Cross":
-            txmode, rxmode = mem.cross_mode.split("->", 1)
-
-        if rxmode == "":
-            _mem.rxtone = 0xFFF
-        elif rxmode == "Tone":
-            sql_mode = "CT"
-            _mem.rxtone = int(float(mem.ctone) * 10)
-        elif rxmode == "DTCS":
             sql_mode = "CT"
             if mem.dtcs_polarity[0] == "N":
-                _mem.rxtone = int(str(mem.rx_dtcs), 8)
-            else:
-                _mem.rxtone = int(str(mem.rx_dtcs | 0x8000), 8)
-
-        if txmode == "":
-            _mem.txtone = 0xFFF
-        elif txmode == "Tone":
-            _mem.txtone = int(float(mem.rtone) * 10)
-        elif txmode == "TSQL":
-            _mem.txtone = int(float(mem.rtone) * 10)
-        elif txmode == "DTCS":
-            if mem.dtcs_polarity[1] == "N":
                 _mem.txtone = int(str(mem.dtcs), 8)
             else:
-                _mem.txtone = int(str(mem.dtcs | 0x8000), 8)
+                _mem.txtone = int(str(mem.dtcs), 8) | 0x8000
+            if mem.dtcs_polarity[1] == "N":
+                _mem.rxtone = int(str(mem.dtcs), 8)
+            else:
+                _mem.rxtone = int(str(mem.dtcs), 8) | 0x8000
+        elif mem.tmode == "Cross":
+            txmode, rxmode = mem.cross_mode.split("->", 1)
+            if rxmode == "":
+                _mem.rxtone = 0xFFF
+                sql_mode = "SQ"
+            elif rxmode == "Tone":
+                sql_mode = "CT"
+                _mem.rxtone = int(float(mem.ctone) * 10)
+            elif rxmode == "DTCS":
+                sql_mode = "CT"
+                if mem.dtcs_polarity[0] == "N":
+                    _mem.rxtone = int(str(mem.rx_dtcs), 8)
+                else:
+                    _mem.rxtone = int(str(mem.rx_dtcs), 8) | 0x8000
+            if txmode == "":
+                _mem.txtone = 0xFFF
+            elif txmode == "Tone":
+                _mem.txtone = int(float(mem.rtone) * 10)
+            elif txmode == "TSQL":
+                _mem.txtone = int(float(mem.rtone) * 10)
+            elif txmode == "DTCS":
+                if mem.dtcs_polarity[1] == "N":
+                    _mem.txtone = int(str(mem.dtcs), 8)
+                else:
+                    _mem.txtone = int(str(mem.dtcs), 8) | 0x8000
+        print("setting _mem.sqlmode to ",sql_mode," ", SQL_MODES.index(sql_mode))
+        print("mem.dtcs is ",mem.dtcs," mem.rx_dtcs is ",mem.rx_dtcs)
+        print("_mem.txtone is now ",_mem.txtone," _mem.rxtone is now ",_mem.rxtone)
         _mem.sqlmode = SQL_MODES.index(sql_mode)
         _mem.mode = self.MODES.index(mem.mode)
         _mem.power = 0 if mem.power is None else POWER_LEVELS.index(mem.power)
