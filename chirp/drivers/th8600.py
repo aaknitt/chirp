@@ -157,9 +157,9 @@ OPTSIG_LIST = ["OFF", "DTMF", "2TONE", "5TONE"]
 PTTID_LIST = ["Off", "BOT", "EOT", "Both"]
 STEPS = [2.5, 5.0, 6.25, 7.5, 8.33, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0]
 LIST_STEPS = [str(x) for x in STEPS]
-# In the context of SQL_MODES, 'Tone' refers to 2tone, 5tone, or DTMF signalling
-# and "CT" refers to CTCSS and DTCS
-SQL_MODES = ["SQ", "CT", "Tone","CT or Tone", "CT and Tone"]
+# In the context of SQL_MODES, 'Tone' refers to 2tone, 5tone, or DTMF
+# signalling while "CT" refers to CTCSS and DTCS
+SQL_MODES = ["SQ", "CT", "Tone", "CT or Tone", "CT and Tone"]
 SPECIAL_CHANS = ("L1", "U1",
                  "L2", "U2",
                  "VFOA_VHF", "VFOA_UHF",
@@ -330,8 +330,8 @@ def _download(radio):
         # HEADER IS NOT INCLUDED IN CHECKSUM CALC, UNLIKE OTHER TYT MODELS
         protected_data = d[5:-4]
         received_checksum = d[-4:-2]
-        # unlike some other TYT models, the data protected by checksum 
-        # is sent over the wire in ASCII format.  Need to convert ASCII 
+        # unlike some other TYT models, the data protected by checksum
+        # is sent over the wire in ASCII format.  Need to convert ASCII
         # to integers to perform the checksum calculation, which uses
         # the same algorithm as other TYT models.
         converted_data = b''
@@ -562,7 +562,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         return repr(self._memobj.memory[number])
 
     def set_memory(self, memory):
-        print("set_memory for ", memory.number)
         """A value in a UI column for chan 'number' has been modified."""
         # update all raw channel memory values (_mem) from UI (mem)
         if memory.number >= 200 and memory.number < 204:
@@ -575,7 +574,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             _mem = self._memobj.chan_mem[memory.number]
             _name = self._memobj.chan_name[memory.number]
             if memory.empty:
-                print("in set_memory clearing chan_avail bit for memory ",memory.number)
                 _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
                 return
             else:
@@ -652,7 +650,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             # Determine if channel is empty
 
             if _do_map(mem.number, 2, self._memobj.chan_avail.bitmap) == 0:
-                print("found that the chan_avail bit for ",mem.number," was cleared, returning empty")
                 mem.empty = True
                 return mem
 
@@ -699,7 +696,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         # ########## TONE ##########
         dtcs_polarity = ['N', 'N']
-        print("in _get_memory and _mem.txtone is ",_mem.txtone)
         if _mem.txtone == 0xFFF:
             # All off
             txmode = ""
@@ -716,7 +712,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             txmode = "DTCS"
             mem.dtcs = int(format(int(_mem.txtone), 'o'))
             dtcs_polarity[0] = "N"
-        print("in _get_memory and _mem.rxtone is ",_mem.rxtone)
         if _mem.rxtone == 0xFFF:
             rxmode = ""
         elif _mem.rxtone >= 0x8000:
@@ -745,8 +740,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         elif rxmode or txmode:
             mem.tmode = "Cross"
             mem.cross_mode = "%s->%s" % (txmode, rxmode)
-        print("done with tone stuff in _get_memory")
-        print("tmode is ",mem.tmode, " ", mem.cross_mode, " mem.rx_dtcs is ",mem.rx_dtcs, " mem.dtcs is ", mem.dtcs)
         # ########## TONE ##########
 
         mem.mode = self.MODES[_mem.mode]
@@ -803,15 +796,13 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             _mem.display = True
         else:
             _mem.display = False
-        print("in set_memory and mem.dtcs_polarity is ",mem.dtcs_polarity)
-        print("in set_memory and mem.tmode is ",mem.tmode)
         rxmode = ""
         txmode = ""
         sql_mode = "SQ"
         if mem.tmode == "":
-           sql_mode = "SQ"
-           _mem.rxtone = 0xFFF
-           _mem.txtone = 0xFFF
+            sql_mode = "SQ"
+            _mem.rxtone = 0xFFF
+            _mem.txtone = 0xFFF
         elif mem.tmode == "Tone":
             txmode = "Tone"
             sql_mode = "SQ"
@@ -860,9 +851,6 @@ class TH8600Radio(chirp_common.CloneModeRadio):
                     _mem.txtone = int(str(mem.dtcs), 8)
                 else:
                     _mem.txtone = int(str(mem.dtcs), 8) | 0x8000
-        print("setting _mem.sqlmode to ",sql_mode," ", SQL_MODES.index(sql_mode))
-        print("mem.dtcs is ",mem.dtcs," mem.rx_dtcs is ",mem.rx_dtcs)
-        print("_mem.txtone is now ",_mem.txtone," _mem.rxtone is now ",_mem.rxtone)
         _mem.sqlmode = SQL_MODES.index(sql_mode)
         _mem.mode = self.MODES.index(mem.mode)
         _mem.power = 0 if mem.power is None else POWER_LEVELS.index(mem.power)
