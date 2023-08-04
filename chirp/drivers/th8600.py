@@ -119,7 +119,7 @@ struct {
 
 #seekto 0x11A0;
 struct {
-  u8 bitmap[26];    // one bit for each channel skipped
+  u8 bitmap[26];    // one bit for each channel; 0 = skip; 1 = dont skip
 } chan_skip;
 
 #seekto 0x1680;
@@ -157,6 +157,9 @@ OPTSIG_LIST = ["OFF", "DTMF", "2TONE", "5TONE"]
 PTTID_LIST = ["Off", "BOT", "EOT", "Both"]
 STEPS = [2.5, 5.0, 6.25, 7.5, 8.33, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0]
 LIST_STEPS = [str(x) for x in STEPS]
+# In the context of SQL_MODES, 'Tone' refers to 2tone, 5tone, or DTMF signalling
+# and "CT" refers to CTCSS and DTCS
+SQL_MODES = ["SQ", "CT", "Tone","CT or Tone", "CT and Tone"]
 SPECIAL_CHANS = ("L1", "U1",
                  "L2", "U2",
                  "VFOA_VHF", "VFOA_UHF",
@@ -222,6 +225,7 @@ def _make_write_frame(addr, length, data=""):
     """Unlike other TYT models, the frame header is
        not included in the checksum calc"""
     cs_byte = _calculate_checksum(data)
+    # convert checksum to ASCII
     converted_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2), 'utf-8')
     frame += converted_checksum
     frame += b"\xFD"
@@ -323,16 +327,22 @@ def _download(radio):
         if not d.endswith(b"\xFD"):
             LOG.warning("Incorrect end")
         # validate the block data with checksum
+        # HEADER IS NOT INCLUDED IN CHECKSUM CALC, UNLIKE OTHER TYT MODELS
         protected_data = d[5:-4]
         received_checksum = d[-4:-2]
+        # unlike some other TYT models, the data protected by checksum 
+        # is sent over the wire in ASCII format.  Need to convert ASCII 
+        # to integers to perform the checksum calculation, which uses
+        # the same algorithm as other TYT models.
         converted_data = b''
         for i in range(0, len(protected_data), 2):
             int_data = int(protected_data[i:i+2].decode('utf-8'), 16)
             converted_data += int_data.to_bytes(1, 'big')
-        # HEADER IS NOT INCLUDED IN CHECKSUM CALC, UNLIKE OTHER TYT MODELS
         cs_byte = _calculate_checksum(converted_data)
-        calculated_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2), 'utf-8')
-        if received_checksum != calculated_checksum:
+        # checksum is sent over the wire as ASCII characters, so convert
+        # the calculated value before checking against what was received
+        converted_checksum = bytes(f'{cs_byte[0]:X}'.zfill(2), 'utf-8')
+        if received_checksum != converted_checksum:
             LOG.warning("Incorrect checksum received")
         # Strip out header, addr, length, checksum,
         # eof and then aggregate the remaining data
@@ -408,7 +418,7 @@ def _upload(radio):
 
 
 def _do_map(chn, sclr, mary):
-    """Set or Clear the chn (1-128) bit in mary[] word array map"""
+    """Set or Clear the chn (1-200) bit in mary[] word array map"""
     # chn is 1-based channel, sclr:1 = set, 0= = clear, 2= return state
     # mary[] is u8 array, but the map is by nibbles
     ndx = int(math.floor((chn - 1) / 8))
@@ -434,12 +444,13 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     MODEL = "TH-8600"
     NEEDS_COMPAT_SERIAL = False
     MODES = ['WFM', 'FM', 'NFM']
+    sql_modeS = ("", "Tone", "TSQL", "DTCS", "Cross")
     TONES = chirp_common.TONES
     DTCS_CODES = chirp_common.DTCS_CODES
     NAME_LENGTH = 6
     DTMF_CHARS = list("0123456789ABCD*#")
     # 136-174, 400-480
-    VALID_BANDS = [(136000000, 174000000), (400000000, 480000000)]
+    VALID_BANDS = [(136000000, 174000001), (400000000, 480000001)]
     # Valid chars on the LCD
     VALID_CHARS = chirp_common.CHARSET_ALPHANUMERIC + \
         "`!\"#$%&'()*+,-./:;<=>?@[]^_"
@@ -451,6 +462,12 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     _fingerprint = b"\xFE\xFE\xEF\xEE\xE1\x26\x98\x00\x00\x31\x31\x31\x31" \
                    b"\x31\x31\x31\x31\x31\x31\x31\x31\x31\x31\x31\x31\x31" \
                    b"\x31\x31\x31\x34\x33\x34\x45"
+
+    @classmethod
+    def match_model(cls, filedata, filename):
+        # This radio has always been post-metadata, so never do
+        # old-school detection
+        return False
 
     @classmethod
     def get_prompts(cls):
@@ -499,7 +516,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         rf.valid_dtcs_codes = chirp_common.DTCS_CODES
         rf.valid_bands = self.VALID_BANDS
         rf.valid_special_chans = SPECIAL_CHANS
-        rf.memory_bounds = (1, 200)
+        rf.memory_bounds = (0, 199)
         rf.valid_skips = ["", "S"]
         return rf
 
@@ -542,31 +559,32 @@ class TH8600Radio(chirp_common.CloneModeRadio):
              self._chan_active_offset, self._info_offset), self._mmap)
     '''
     def get_raw_memory(self, number):
-        return repr(self._memobj.memory[number - 1])
+        return repr(self._memobj.memory[number])
 
     def set_memory(self, memory):
+        print("set_memory for ", memory.number)
         """A value in a UI column for chan 'number' has been modified."""
         # update all raw channel memory values (_mem) from UI (mem)
-        if memory.number >= 201 and memory.number <= 204:
-            _mem = self._memobj.scanlimits[memory.number-201]
+        if memory.number >= 200 and memory.number < 204:
+            _mem = self._memobj.scanlimits[memory.number-200]
             _name = None
-        elif memory.number >= 205:
-            _mem = self._memobj.vfos[memory.number-205]
+        elif memory.number >= 204:
+            _mem = self._memobj.vfos[memory.number-204]
             _name = None
         else:
-            _mem = self._memobj.chan_mem[memory.number - 1]
-            _name = self._memobj.chan_name[memory.number - 1]
+            _mem = self._memobj.chan_mem[memory.number]
+            _name = self._memobj.chan_name[memory.number]
+            if memory.empty:
+                print("in set_memory clearing chan_avail bit for memory ",memory.number)
+                _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
+                return
+            else:
+                _do_map(memory.number, 1, self._memobj.chan_avail.bitmap)
 
-        if memory.empty:
-            _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
-            return
-
-        _do_map(memory.number, 1, self._memobj.chan_avail.bitmap)
-
-        if memory.skip == "":
-            _do_map(memory.number, 1, self._memobj.chan_skip.bitmap)
-        else:
-            _do_map(memory.number, 0, self._memobj.chan_skip.bitmap)
+            if memory.skip == "":
+                _do_map(memory.number, 1, self._memobj.chan_skip.bitmap)
+            else:
+                _do_map(memory.number, 0, self._memobj.chan_skip.bitmap)
 
         return self._set_memory(memory, _mem, _name)
 
@@ -575,70 +593,70 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         mem = chirp_common.Memory()
         mem.number = number
         # Get a low-level memory object mapped to the image
-        if isinstance(number, str) or number > 200:
+        if isinstance(number, str) or number >= 200:
             # mem.number = -10 + SPECIAL_CHANS.index(number)
-            if number == 'L1' or number == 201:
+            if number == 'L1' or number == 200:
                 _mem = self._memobj.scanlimits[0]
                 _name = None
-                mem.number = 201
+                mem.number = 200
                 mem.extd_number = 'L1'
-            elif number == 'U1' or number == 202:
+            elif number == 'U1' or number == 201:
                 _mem = self._memobj.scanlimits[1]
                 _name = None
-                mem.number = 202
+                mem.number = 201
                 mem.extd_number = 'U1'
-            elif number == 'L2' or number == 203:
+            elif number == 'L2' or number == 202:
                 _mem = self._memobj.scanlimits[2]
                 _name = None
-                mem.number = 203
+                mem.number = 202
                 mem.extd_number = 'L2'
-            elif number == 'U2' or number == 204:
+            elif number == 'U2' or number == 203:
                 _mem = self._memobj.scanlimits[3]
                 _name = None
-                mem.number = 204
+                mem.number = 203
                 mem.extd_number = 'U2'
-            elif number == 'VFOA_VHF' or number == 205:
+            elif number == 'VFOA_VHF' or number == 204:
                 _mem = self._memobj.vfos[0]
-                mem.number = 205
+                mem.number = 204
                 mem.extd_number = 'VFOA_VHF'
                 _name = None
-            elif number == 'VFOB_VHF' or number == 208:
-                _mem = self._memobj.vfos[3]
-                mem.number = 208
-                mem.extd_number = 'VFOB_VHF'
-                _name = None
-            elif number == 'VFOA_UHF' or number == 207:
-                _mem = self._memobj.vfos[2]
-                mem.number = 207
-                mem.extd_number = 'VFOA_UHF'
-                _name = None
-            elif number == 'VFOB_UHF' or number == 210:
-                _mem = self._memobj.vfos[5]
-                mem.number = 210
-                mem.extd_number = 'VFOB_UHF'
-                _name = None
-            elif number == 'VFOA_220' or number == 206:
+            elif number == 'VFOA_220' or number == 205:
                 _mem = self._memobj.vfos[1]
                 _name = None
+                mem.number = 205
+            elif number == 'VFOA_UHF' or number == 206:
+                _mem = self._memobj.vfos[2]
                 mem.number = 206
+                mem.extd_number = 'VFOA_UHF'
+                _name = None
+            elif number == 'VFOB_VHF' or number == 207:
+                _mem = self._memobj.vfos[3]
+                mem.number = 207
+                mem.extd_number = 'VFOB_VHF'
+                _name = None
                 mem.extd_number = 'VFOA_220'
-            elif number == 'VFOB_220' or number == 209:
+            elif number == 'VFOB_220' or number == 208:
                 _mem = self._memobj.vfos[4]
                 _name = None
-                mem.number = 209
+                mem.number = 208
                 mem.extd_number = 'VFOB_220'
+            elif number == 'VFOB_UHF' or number == 209:
+                _mem = self._memobj.vfos[5]
+                mem.number = 209
+                mem.extd_number = 'VFOB_UHF'
+                _name = None
         else:
             mem.number = number  # Set the memory number
-            # radio first channel is 1, mem map is base 0
-            _mem = self._memobj.chan_mem[number - 1]
-            _name = self._memobj.chan_name[number - 1]
+            _mem = self._memobj.chan_mem[number]
+            _name = self._memobj.chan_name[number]
             # Determine if channel is empty
 
-            if _do_map(number, 2, self._memobj.chan_avail.bitmap) == 0:
+            if _do_map(mem.number, 2, self._memobj.chan_avail.bitmap) == 0:
+                print("found that the chan_avail bit for ",mem.number," was cleared, returning empty")
                 mem.empty = True
                 return mem
 
-            if _do_map(mem.number, 2, self._memobj.chan_skip.bitmap) > 0:
+            if _do_map(mem.number, 2, self._memobj.chan_skip.bitmap) == 1:
                 mem.skip = ""
             else:
                 mem.skip = "S"
@@ -684,27 +702,28 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         if _mem.txtone == 0xFFF:
             # All off
             txmode = ""
-        elif _mem.txtone >= 0x8013:
+        elif _mem.txtone >= 0x8000:
             # DTSC inverted when high bit is set - signed int
             txmode = "DTCS"
             mem.dtcs = int(format(int(_mem.txtone & 0x7F), 'o'))
             dtcs_polarity[0] = "R"
-        elif _mem.txtone > 511:
+        elif _mem.txtone > 500:
             txmode = "Tone"
             mem.rtone = int(_mem.txtone) / 10.0
         else:
-            # DTSC
+            # DTCS
             txmode = "DTCS"
             mem.dtcs = int(format(int(_mem.txtone), 'o'))
             dtcs_polarity[0] = "N"
+
         if _mem.rxtone == 0xFFF:
             rxmode = ""
-        elif _mem.rxtone >= 0x8013:
+        elif _mem.rxtone >= 0x8000:
             # DTSC inverted when high bit is set - signed int
-            txmode = "DTCS"
-            mem.dtcs = int(format(int(_mem.txtone & 0x7F), 'o'))
+            rxmode = "DTCS"
+            mem.rx_dtcs = int(format(int(_mem.rxtone & 0x7F), 'o'))
             dtcs_polarity[1] = "R"
-        elif _mem.rxtone > 511:
+        elif _mem.rxtone > 500:
             rxmode = "Tone"
             mem.ctone = int(_mem.rxtone) / 10.0
         else:
@@ -783,6 +802,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
         rxmode = ""
         txmode = ""
+        sql_mode = "SQ"
 
         if mem.tmode == "Tone":
             txmode = "Tone"
@@ -790,7 +810,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             rxmode = "Tone"
             txmode = "TSQL"
         elif mem.tmode == "DTCS":
-            rxmode = "DTCSSQL"
+            rxmode = "DTCS"
             txmode = "DTCS"
         elif mem.tmode == "Cross":
             txmode, rxmode = mem.cross_mode.split("->", 1)
@@ -798,29 +818,27 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         if rxmode == "":
             _mem.rxtone = 0xFFF
         elif rxmode == "Tone":
+            sql_mode = "CT"
             _mem.rxtone = int(float(mem.ctone) * 10)
-        elif rxmode == "DTCSSQL":
-            if mem.dtcs_polarity[0] == "N":
-                _mem.rxtone = int(str(mem.dtcs), 8)
-            else:
-                _mem.rxtone = int(str(mem.dtcs | 0x8000), 8)
         elif rxmode == "DTCS":
+            sql_mode = "CT"
             if mem.dtcs_polarity[0] == "N":
-                _mem.rxtone = int(str(mem.dtcs), 8)
+                _mem.rxtone = int(str(mem.rx_dtcs), 8)
             else:
-                _mem.rxtone = int(str(mem.dtcs | 0x8000), 8)
+                _mem.rxtone = int(str(mem.rx_dtcs | 0x8000), 8)
 
         if txmode == "":
             _mem.txtone = 0xFFF
         elif txmode == "Tone":
             _mem.txtone = int(float(mem.rtone) * 10)
         elif txmode == "TSQL":
-            _mem.txtone = int(float(mem.ctone) * 10)
+            _mem.txtone = int(float(mem.rtone) * 10)
         elif txmode == "DTCS":
             if mem.dtcs_polarity[1] == "N":
                 _mem.txtone = int(str(mem.dtcs), 8)
             else:
                 _mem.txtone = int(str(mem.dtcs | 0x8000), 8)
+        _mem.sqlmode = SQL_MODES.index(sql_mode)
         _mem.mode = self.MODES.index(mem.mode)
         _mem.power = 0 if mem.power is None else POWER_LEVELS.index(mem.power)
 
