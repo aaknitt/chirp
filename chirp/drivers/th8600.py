@@ -351,7 +351,7 @@ def _download(radio):
             LOG.error("Invalid data length")
         converted_data = b''
         for i in range(0, len(ascii_data), 2):
-            LOG.debug(ascii_data[i] + ascii_data[i+1])
+            # LOG.debug(ascii_data[i] + ascii_data[i+1])
             int_data = int(ascii_data[i:i+2].decode('utf-8'), 16)
             converted_data += int_data.to_bytes(1, 'big')
         data += converted_data
@@ -418,11 +418,11 @@ def _upload(radio):
 
 
 def _do_map(chn, sclr, mary):
-    """Set or Clear the chn (1-200) bit in mary[] word array map"""
+    """Set or Clear the chn (0-199) bit in mary[] word array map"""
     # chn is 1-based channel, sclr:1 = set, 0= = clear, 2= return state
     # mary[] is u8 array, but the map is by nibbles
-    ndx = int(math.floor((chn - 1) / 8))
-    bv = (chn - 1) % 8
+    ndx = int(math.floor((chn) / 8))
+    bv = (chn) % 8
     msk = 1 << bv
     mapbit = sclr
     if sclr == 1:    # Set the bit
