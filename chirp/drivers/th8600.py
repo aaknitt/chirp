@@ -328,8 +328,8 @@ def _download(radio):
             LOG.warning("Incorrect end")
         # validate the block data with checksum
         # HEADER IS NOT INCLUDED IN CHECKSUM CALC, UNLIKE OTHER TYT MODELS
-        protected_data = d[5:-4]
-        received_checksum = d[-4:-2]
+        protected_data = d[5:-3]
+        received_checksum = d[-3:-1]
         # unlike some other TYT models, the data protected by checksum
         # is sent over the wire in ASCII format.  Need to convert ASCII
         # to integers to perform the checksum calculation, which uses
@@ -792,7 +792,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
                 _name.extra_name[i] = ord(out_name[i+6])
 
         # autoset display to name if filled, else show frequency
-        if mem.name != "      ":
+        if mem.name != "":
             _mem.display = True
         else:
             _mem.display = False
