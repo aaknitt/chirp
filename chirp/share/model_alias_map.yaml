@@ -163,8 +163,8 @@ Baofeng/Pofung:
 - alt: BF-F8HP
   model: UV-S9
   variant: 'tri-power: '
-- alt: Radioddity UV-5RX3
-  model: UV-S9/S9T/S9X3
+- alt: UV-S9X3
+  model: UV-S9/S9T
   variant: 'tri-band: '
 - alt: UV-82HP
   model: UV-X9
@@ -217,6 +217,12 @@ Retevis:
   model: RT5 with 2 power levels
 - alt: Baofeng UV-B5
   model: RT-B6
+- alt: Retevis RB27
+  model: RB27B (full band support)
+- alt: Retevis RB27
+  model: RB27V (full band support)
+- alt: Retevis RB27
+  model: RB627B (full band support)
 Rugged Radios:
 - alt: Baofeng UV-5R
   model: RH5R, RH5R-V2
@@ -274,6 +280,8 @@ Wurui:
 Yaesu:
 - alt: FTM-3200DR
   model: FTM-3100
+- alt: VX-170
+  model: FT-270
 Zastone:
 - alt: QYT KT8900D
   model: MP-380
@@ -299,3 +307,8 @@ Quansheng:
   model: TG-UV2
 - alt: UV-K5
   model: UV-K5(8)
+- alt: UV-K5
+  model: UV-5R Plus
+Powerful:
+- alt: Quansheng UV-K5
+  model: UV-S5

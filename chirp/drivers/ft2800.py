@@ -48,7 +48,6 @@ def _download(radio):
     attempts = 30
     for _i in range(0, attempts):
         data = radio.pipe.read(8)
-        print(data)
         if data in SUPPORTED_IDBLOCKS:
             radio.subtype = data
             break
@@ -110,7 +109,7 @@ def _upload(radio):
             break
         LOG.debug("What is this garbage?\n%s" % util.hexprint(data))
 
-    _send(radio.pipe, bytes(radio.subtype))
+    _send(radio.pipe, radio.subtype)
     time.sleep(1)
     ack = radio.pipe.read(300)
     LOG.debug("Ack was (%i):\n%s" % (len(ack), util.hexprint(ack)))
@@ -185,21 +184,20 @@ class FT2800Radio(YaesuCloneModeRadio):
     """Yaesu FT-2800"""
     VENDOR = "Yaesu"
     MODEL = "FT-2800M"
-    IDBLOCK = b"\x0c\x01\x41\x33\x35\x02\x00\xb8"
 
     _block_sizes = [8, 7680]
     _memsize = 7680
 
     @property
     def subtype(self):
-        if 'subtype_idblock' in self.metadata:
-            return bytes(self.metadata['subtype_idblock'], 'latin1')
-        else:
-            return SUPPORTED_IDBLOCKS[0]
+        # If our image is from before the subtype was stashed, assume
+        # the default unmodified US ID block
+        return bytes(self.metadata.get('subtype_idblock',
+                                       SUPPORTED_IDBLOCKS[0]))
 
     @subtype.setter
     def subtype(self, value):
-        self.metadata = {'subtype_idblock': value.decode('latin1')}
+        self.metadata = {'subtype_idblock': [x for x in value]}
 
     @classmethod
     def get_prompts(cls):

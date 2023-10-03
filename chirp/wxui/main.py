@@ -20,9 +20,7 @@ import logging
 import os
 import pickle
 import platform
-import shutil
 import sys
-import tempfile
 import time
 import webbrowser
 
@@ -356,6 +354,12 @@ class ChirpLiveEditorSet(ChirpEditorSet):
     def close(self):
         for thread in self._threads:
             thread.end()
+        try:
+            self._radio.pipe.close()
+        except Exception as e:
+            LOG.exception('Failed to close %s: %s', self._radio.pipe, e)
+        else:
+            LOG.debug('Closed %s', self._radio.pipe)
 
     @property
     def modified(self):
@@ -697,19 +701,19 @@ class ChirpMain(wx.Frame):
         self._import_menu_item = wx.NewId()
         import_item = file_menu.Append(wx.MenuItem(file_menu,
                                                    self._import_menu_item,
-                                                   _('Import from file')))
+                                                   _('Import from file...')))
         self.Bind(wx.EVT_MENU, self._menu_import, import_item)
 
         self._export_menu_item = wx.NewId()
         export_item = file_menu.Append(wx.MenuItem(file_menu,
                                                    self._export_menu_item,
-                                                   _('Export to CSV')))
+                                                   _('Export to CSV...')))
         export_item.SetAccel(wx.AcceleratorEntry(wx.MOD_CONTROL, ord('E')))
         self.Bind(wx.EVT_MENU, self._menu_export, export_item)
 
         if CONF.get_bool('developer', 'state'):
             loadmod_item = file_menu.Append(wx.MenuItem(file_menu, wx.NewId(),
-                                                        _('Load Module')))
+                                                        _('Load Module...')))
             self.Bind(wx.EVT_MENU, self._menu_load_module, loadmod_item)
 
         file_menu.Append(wx.MenuItem(file_menu, wx.ID_SEPARATOR))
@@ -757,15 +761,22 @@ class ChirpMain(wx.Frame):
 
         self._last_search_text = ''
         find_item = edit_menu.Append(wx.ID_FIND)
-        edit_menu.SetLabel(wx.ID_FIND, _('Find'))
+        edit_menu.SetLabel(wx.ID_FIND, _('Find...'))
+        find_item.SetAccel(wx.AcceleratorEntry(wx.MOD_CONTROL, ord('F')))
         self.Bind(wx.EVT_MENU, self._menu_find, find_item)
+
+        if platform.system() == 'Windows':
+            findnextacc = wx.AcceleratorEntry()
+            findnextacc.FromString('F3')
+        else:
+            findnextacc = wx.AcceleratorEntry(wx.MOD_CONTROL | wx.ACCEL_ALT,
+                                              ord('F'))
 
         self._find_next_item = wx.NewId()
         find_next_item = edit_menu.Append(wx.MenuItem(edit_menu,
                                                       self._find_next_item,
                                                       _('Find Next')))
-        find_next_item.SetAccel(wx.AcceleratorEntry
-                                (wx.MOD_CONTROL | wx.ACCEL_ALT, ord('F')))
+        find_next_item.SetAccel(findnextacc)
         self.Bind(wx.EVT_MENU, self._menu_find, find_next_item,
                   self._find_next_item)
 
@@ -809,7 +820,7 @@ class ChirpMain(wx.Frame):
         self._download_menu_item = wx.NewId()
         download_item = wx.MenuItem(
             radio_menu, self._download_menu_item,
-            _('Download from radio'))
+            _('Download from radio...'))
         download_item.SetAccel(wx.AcceleratorEntry(updownmod, ord('D')))
         self.Bind(wx.EVT_MENU, self._menu_download, download_item)
         radio_menu.Append(download_item)
@@ -817,7 +828,7 @@ class ChirpMain(wx.Frame):
         self._upload_menu_item = wx.NewId()
         upload_item = wx.MenuItem(
             radio_menu, self._upload_menu_item,
-            _('Upload to radio'))
+            _('Upload to radio...'))
         upload_item.SetAccel(wx.AcceleratorEntry(updownmod, ord('U')))
         self.Bind(wx.EVT_MENU, self._menu_upload, upload_item)
         radio_menu.Append(upload_item)
@@ -853,7 +864,7 @@ class ChirpMain(wx.Frame):
         auto_edits.Check(CONF.get_bool('auto_edits', 'state', True))
 
         select_bandplan = wx.MenuItem(radio_menu, wx.NewId(),
-                                      _('Select Bandplan'))
+                                      _('Select Bandplan...'))
         self.Bind(wx.EVT_MENU, self._menu_select_bandplan, select_bandplan)
         radio_menu.Append(select_bandplan)
 
@@ -934,7 +945,7 @@ class ChirpMain(wx.Frame):
                 help_menu.Append(debug_loc_menu)
 
         lmfi_menu = wx.MenuItem(help_menu, wx.NewId(),
-                                _('Load module from issue'))
+                                _('Load module from issue...'))
         self.Bind(wx.EVT_MENU, self._menu_load_from_issue, lmfi_menu)
         help_menu.Append(lmfi_menu)
 
@@ -1674,22 +1685,12 @@ class ChirpMain(wx.Frame):
 
     @common.error_proof()
     def _menu_debug_log(self, event):
-        pf = chirp_platform.get_platform()
-        src = pf.config_file('debug.log')
-        dst = tempfile.NamedTemporaryFile(
-            prefix='chirp_debug-',
-            suffix='.txt').name
-        shutil.copy(src, dst)
+        dst = common.temporary_debug_log()
         wx.LaunchDefaultApplication(dst)
 
     @common.error_proof()
     def _menu_debug_loc(self, event):
-        pf = chirp_platform.get_platform()
-        src = pf.config_file('debug.log')
-        dst = tempfile.NamedTemporaryFile(
-            prefix='chirp_debug-',
-            suffix='.txt').name
-        shutil.copy(src, dst)
+        dst = common.temporary_debug_log()
         common.reveal_location(dst)
 
     @common.error_proof()

@@ -331,7 +331,7 @@ class VX6Radio(yaesu_clone.YaesuCloneModeRadio):
     _ARTS_INT = ("15 S", "25 S")
     _BELL = ("OFF", "1", "3", "5", "8", "Continuous")
     _BEEP_LEVEL = ["%i" % int(x) for x in range(1, 10)]
-    _CH_CNT = ("5 MHZ", "10 MHZ", "50 MHZ", "100 MHZ")
+    _CH_CNT = ("5 MHz", "10 MHz", "50 MHz", "100 MHz")
     _DIM_LEVEL = ["%i" % int(x) for x in range(0, 13)]
     _EMERGENCY = ("Beep", "Strobe", "Bp+Str", "Beam", "Bp+Bem", "CW",
                   "Bp+CW", "CWT")
@@ -351,10 +351,10 @@ class VX6Radio(yaesu_clone.YaesuCloneModeRadio):
     _ON_TIMER = ["OFF"] + \
         ["%02d:%02d" % (t / 60, t % 60) for t in range(10, 1450, 10)]
     _OPEN_MSG = ("Off", "DC Voltage", "Message")
-    _PTT_DELAY = ("OFF", "20MS", "50MS", "100MS", "200MS")
+    _PTT_DELAY = ("OFF", "20 ms", "50 ms", "100 ms", "200 ms")
     _RF_SQL = ("OFF", "S1", "S2", "S3", "S4", "S5",
                "S6", "S7", "S8", "S9", "S9+")
-    _RX_SAVE = ("OFF", "200 ms", "300 MS", "500 MS", "1 S", "2 S")
+    _RX_SAVE = ("OFF", "200 ms", "300 ms", "500 ms", "1 s", "2 s")
     _RESUME = ("3 SEC", "5 SEC", "10 SEC", "BUSY", "HOLD")
     _SMART_SEARCH = ("SINGLE", "CONT")
     _TOT = ("OFF", "1MIN", "3MIN", "5MIN", "10MIN")
@@ -521,7 +521,7 @@ class VX6Radio(yaesu_clone.YaesuCloneModeRadio):
     def _resolve_power(self, mem):
         # Since we have two sets of power levels, we may need to match the
         # one in mem.power by name instead of absolute power to handle things
-        # like editing a 2m channel to a 220MHz frequency, etc.
+        # like editing a 2m channel to a 220 MHz frequency, etc.
         by_name = [str(x) for x in POWER_LEVELS]
         index = by_name.index(str(mem.power))
         LOG.debug('Resolving power %r by name to index %i' % (

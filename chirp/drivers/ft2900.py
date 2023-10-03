@@ -79,7 +79,6 @@ def _download(radio):
         if len(chunk) != 32:
             LOG.debug("len chunk is %i\n" % (len(chunk)))
             raise Exception("Failed to get full data block")
-            break
         else:
             data += chunk
 
@@ -1167,7 +1166,7 @@ class FT2900Radio(YaesuCloneModeRadio):
                                                              .ts_speed])))
 
         # 56 VFO.SCN
-        opts = ["+/- 1MHz", "+/- 2MHz", "+/-5MHz", "All"]
+        opts = ["+/- 1 MHz", "+/- 2 MHz", "+/-5 MHz", "All"]
         scan.append(RadioSetting("vfo_scan", "VFO Scanner Width",
                                  RadioSettingValueList(opts,
                                                        opts[_settings

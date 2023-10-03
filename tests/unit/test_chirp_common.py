@@ -2,6 +2,7 @@ import base64
 import copy
 import json
 import os
+import pickle
 import tempfile
 
 from unittest import mock
@@ -11,6 +12,7 @@ from chirp import CHIRP_VERSION
 from chirp import chirp_common
 from chirp import directory
 from chirp import errors
+from chirp import settings
 
 
 class TestUtilityFunctions(base.BaseTest):
@@ -726,8 +728,14 @@ class TestCloneModeExtras(base.BaseTest):
         # Now we should have the comment
         self.assertEqual('a comment', m.comment)
 
+        # Make sure it is in the metadata
+        self.assertIn('0000_comment', r.metadata['mem_extra'])
+
         # Erase the memory (only extra) and make sure we get no comment
         r.erase_memory_extra(0)
+
+        # Make sure it's gone from metadata
+        self.assertNotIn('0000_comment', r.metadata['mem_extra'])
 
         # Do a get, get_extra
         m = r.get_memory(0)
@@ -735,6 +743,11 @@ class TestCloneModeExtras(base.BaseTest):
         self.assertEqual(146520000, m.freq)
         # Now we should have no comment because we erased
         self.assertEqual('', m.comment)
+
+        r.set_memory_extra(m)
+
+        # Make sure we don't keep empty comments
+        self.assertNotIn('0000_comment', r.metadata['mem_extra'])
 
 
 class TestOverrideRules(base.BaseTest):
@@ -749,8 +762,6 @@ class TestOverrideRules(base.BaseTest):
         'BTECH_GMRS-V2',
         'BTECH_MURS-V2',
         'Radioddity_DB25-G',
-        'Retevis_RA85',
-        'Retevis_RA685',
         'Retevis_RB17P'
     ]
 
@@ -785,3 +796,64 @@ class TestOverrideRules(base.BaseTest):
                 self._test_radio_override_calls_super(rclass)
             else:
                 self._test_radio_override_immutable_policy(rclass)
+
+
+class TestMemory(base.BaseTest):
+    def test_pickle_with_extra(self):
+        m = chirp_common.Memory()
+        m.extra = settings.RadioSettingGroup('extra', 'extra')
+        m.extra.append(settings.RadioSetting(
+            'test', 'test',
+            settings.RadioSettingValueString(1, 32, current='foo')))
+        n = pickle.loads(pickle.dumps(m))
+        self.assertEqual(str(n.extra['test'].value),
+                         str(m.extra['test'].value))
+
+    def test_frozen_from_frozen(self):
+        m = chirp_common.FrozenMemory(chirp_common.Memory(123))
+        n = chirp_common.FrozenMemory(m)
+        self.assertEqual(123, n.number)
+
+    def test_frozen_dupe_unfrozen(self):
+        FrozenMemory = chirp_common.FrozenMemory(
+            chirp_common.Memory()).__class__
+        m = chirp_common.FrozenMemory(chirp_common.Memory(123)).dupe()
+        self.assertNotIsInstance(m, FrozenMemory)
+        self.assertFalse(hasattr(m, '_frozen'))
+
+    def test_tone_validator(self):
+        m = chirp_common.Memory()
+        # 100.0 is a valid tone
+        m.rtone = 100.0
+        m.ctone = 100.0
+
+        # 100 is not (must be a float)
+        with self.assertRaises(ValueError):
+            m.rtone = 100
+        with self.assertRaises(ValueError):
+            m.ctone = 100
+
+        # 30.0 and 300.0 are out of range
+        with self.assertRaises(ValueError):
+            m.rtone = 30.0
+        with self.assertRaises(ValueError):
+            m.rtone = 300.0
+        with self.assertRaises(ValueError):
+            m.ctone = 30.0
+        with self.assertRaises(ValueError):
+            m.ctone = 300.0
+
+
+class TestRadioFeatures(base.BaseTest):
+    def test_valid_tones(self):
+        rf = chirp_common.RadioFeatures()
+        # These are valid tones
+        rf.valid_tones = [100.0, 107.2]
+
+        # These contain invalid tones
+        with self.assertRaises(ValueError):
+            rf.valid_tones = [100.0, 30.0]
+        with self.assertRaises(ValueError):
+            rf.valid_tones = [100.0, 300.0]
+        with self.assertRaises(ValueError):
+            rf.valid_tones = [100, 107.2]

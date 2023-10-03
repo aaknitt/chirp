@@ -26,6 +26,7 @@ import wx.propgrid
 import wx.lib.mixins.gridlabelrenderer as glr
 
 from chirp import chirp_common
+from chirp import directory
 from chirp import bandplan
 from chirp.drivers import generic_csv
 from chirp import errors
@@ -576,13 +577,17 @@ class ChirpMemoryDropTarget(wx.DropTarget):
     def OnData(self, x, y, defResult):
         if not self.GetData():
             return wx.DragNone
+        payload = self.parse_data()
         x, y = self._memedit._grid.CalcUnscrolledPosition(x, y)
         y -= self._memedit._grid.GetColLabelSize()
         row, cell = self._memedit._grid.XYToCell(x, y)
-        if row < 0:
+        start_row = self._memedit.mem2row(payload['mems'][0].number)
+        if row < 0 or row == start_row:
+            LOG.debug('Ignoring drag from row %i -> %i',
+                      start_row, row)
             return wx.DragCancel
+
         LOG.debug('Memory dropped on row %s,%s' % (row, cell))
-        payload = self.parse_data()
         original_locs = [m.number for m in payload['mems']]
         source = self._memedit.FindWindowById(payload.pop('source'))
         if not self._memedit._cb_paste_memories(payload, row=row):
@@ -798,7 +803,7 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
         move_dn.SetAccel(wx.AcceleratorEntry(
             extra_move | wx.ACCEL_RAW_CTRL, wx.WXK_DOWN))
 
-        goto = common.EditorMenuItem(cls, '_goto', _('Goto'))
+        goto = common.EditorMenuItem(cls, '_goto', _('Goto...'))
         goto.SetAccel(wx.AcceleratorEntry(wx.MOD_CONTROL, ord('G')))
 
         expand_extra = common.EditorMenuItemToggle(
@@ -1363,7 +1368,7 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
         # offset in some cases. For radios that do not store offset itself,
         # we need to prompt for the offset so it is set in the same operation.
         # For split mode, we should always prompt, because trying to set a
-        # TX frequency of 600kHz is likely to fail on most radios.
+        # TX frequency of 600 kHz is likely to fail on most radios.
         if col_def.name == 'duplex' and val != '':
             if not self._resolve_duplex(mem):
                 event.Veto()
@@ -1737,12 +1742,11 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
         mems = []
         for row in rows:
             mem = self.synchronous_get_memory(row + offset)
-            # We can't pickle settings, nor would they apply if we
-            # paste across models
-            mem.extra = []
             mems.append(mem)
+        rcid = directory.radio_class_id(self._radio.__class__)
         payload = {'mems': mems,
                    'features': self._radio.get_features(),
+                   'source_radio_id': rcid,
                    'source': self.GetId()}
         data = wx.DataObjectComposite()
         memdata = wx.CustomDataObject(common.CHIRP_DATA_MEMORY)
@@ -1819,6 +1823,10 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
             if resp == wx.ID_NO:
                 return False
 
+        same_class = (payload.get('source_radio_id') ==
+                      directory.radio_class_id(self._radio.__class__))
+        LOG.debug('Paste is from identical radio class: %s', same_class)
+
         errormsgs = []
         modified = False
         for mem in mems:
@@ -1850,6 +1858,12 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
                         self._radio.validate_memory(mem))
                     errormsgs.extend([(mem, e) for e in errs])
                     errormsgs.extend([(mem, w) for w in warns])
+
+                    # If we are not pasting into a radio of the same type,
+                    # then unset the mem.extra bits which won't be compatible.
+                    if not same_class:
+                        mem.extra = []
+
                     if not errs:
                         # If we got error messages from validate, don't even
                         # try to set the memory, just like if import_logic
@@ -2014,6 +2028,7 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
         selected = self._grid.GetSelectedRows()
         if len(selected) <= 1:
             selected = range(0, self._grid.GetNumberRows())
+
         r = generic_csv.CSVRadio(None)
         # The CSV driver defaults to a single non-empty memory at location
         # zero, so delete it before we go to export.
@@ -2024,7 +2039,8 @@ class ChirpMemEdit(common.ChirpEditor, common.ChirpSyncEditor):
                 # We don't export specials
                 continue
             if not m.empty:
-                m = import_logic.import_mem(r, self._features, m)
+                m = import_logic.import_mem(r, self._features, m,
+                                            mem_cls=chirp_common.Memory)
             r.set_memory(m)
         r.save(filename)
         LOG.info('Wrote exported CSV to %s' % filename)

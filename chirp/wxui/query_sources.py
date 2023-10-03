@@ -218,6 +218,7 @@ class QuerySourceDialog(wx.Dialog):
 
     def do_query(self):
         LOG.info('Starting QueryThread for %s' % self.result_radio)
+        LOG.debug('Query Parameters: %s' % self.get_params())
         QueryThread(self, self.result_radio).start()
 
     def get_params(self):
@@ -600,7 +601,7 @@ class PrzemiennikiQueryDialog(QuerySourceDialog):
                      self._section)
 
     def get_info(self):
-        return _('FREE repeater database, which provide most up-to-date\n'
+        return _('FREE repeater database, which provides most up-to-date\n'
                  'information about repeaters in Europe. No account is\n'
                  'required.')
 

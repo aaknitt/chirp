@@ -4,6 +4,8 @@
 | <a name="ARRL_Travel_Plus"></a> ARRL_Travel_Plus |  |  |  | 0.00% |
 | <a name="Abbree_AR-518"></a> Abbree_AR-518 | [@KC9HI](https://github.com/KC9HI) | 16-Dec-2022 | Yes | 0.24% |
 | <a name="Abbree_AR-63"></a> Abbree_AR-63 | [@KC9HI](https://github.com/KC9HI) | 30-Nov-2022 | Yes | 0.03% |
+| <a name="Abbree_AR-730"></a> Abbree_AR-730 | [@KC9HI](https://github.com/KC9HI) | 17-Aug-2023 | Yes |  |
+| <a name="Abbree_AR-F5"></a> Abbree_AR-F5 | [@KC9HI](https://github.com/KC9HI) | 09-Aug-2023 | Yes |  |
 | <a name="Alinco_DJ-G7EG"></a> Alinco_DJ-G7EG | [@HB9UF](https://github.com/HB9UF) | 09-Dec-2022 | Yes | 0.44% |
 | <a name="Alinco_DJ-G7T"></a> Alinco_DJ-G7T | [Reported working](https://chirp.danplanet.com/issues/10567) | 09-May-2023 | Yes |  |
 | <a name="Alinco_DJ175"></a> Alinco_DJ175 | [Implied by Alinco_DR235T](#user-content-Alinco_DR235T) | 12-Dec-2022 | Yes | 0.03% |
@@ -65,6 +67,8 @@
 | <a name="Baofeng_UV-9G"></a> Baofeng_UV-9G | [@KC9HI](https://github.com/KC9HI) | 3-Dec-2022 | Yes | 0.65% |
 | <a name="Baofeng_UV-9R"></a> Baofeng_UV-9R | [@KC9HI](https://github.com/KC9HI) | 3-Dec-2022 | Yes | **2.52%** |
 | <a name="Baofeng_UV-B5"></a> Baofeng_UV-B5 | [@KC9HI](https://github.com/KC9HI) | 18-Nov-2022 | Yes | 0.35% |
+| <a name="Baofeng_UV-S9X3"></a> Baofeng_UV-S9X3 | [@KC9HI](https://github.com/KC9HI) | 22-Aug-2023 | Yes |  |
+| <a name="Baofeng_W31E"></a> Baofeng_W31E | [@KC9HI](https://github.com/KC9HI) | 14-Aug-2023 | Yes |  |
 | <a name="Baojie_BJ-218"></a> Baojie_BJ-218 | [Implied by LUITON_LT-725UV](#user-content-LUITON_LT-725UV) | 16-Feb-2023 | Yes | 0.29% |
 | <a name="Baojie_BJ-318"></a> Baojie_BJ-318 | [@KC9HI](https://github.com/KC9HI) | 2-Jan-2023 | Yes | 0.10% |
 | <a name="Baojie_BJ-9900"></a> Baojie_BJ-9900 |  |  |  | 0.02% |
@@ -106,7 +110,7 @@
 | <a name="Icom_IC-P7"></a> Icom_IC-P7 | [Probably works](https://github.com/kk7ds/chirp/blob/py3/chirp/drivers/icf.py) | 12-Dec-2022 | Yes | 0.01% |
 | <a name="Icom_IC-Q7A"></a> Icom_IC-Q7A | [@KC9HI](https://github.com/KC9HI) | 20-Nov-2022 | Yes | 0.01% |
 | <a name="Icom_IC-T70"></a> Icom_IC-T70 | [Probably works](https://github.com/kk7ds/chirp/blob/py3/chirp/drivers/icf.py) | 12-Dec-2022 | Yes | 0.03% |
-| <a name="Icom_IC-T7H"></a> Icom_IC-T7H | [Probably works](https://github.com/kk7ds/chirp/blob/py3/chirp/drivers/icf.py) | 12-Dec-2022 | Yes | 0.02% |
+| <a name="Icom_IC-T7H"></a> Icom_IC-T7H | [Reported working](https://chirp.danplanet.com/issues/10752) | 30-Jul-2023 | Yes | 0.02% |
 | <a name="Icom_IC-T8A"></a> Icom_IC-T8A | [Probably works](https://github.com/kk7ds/chirp/blob/py3/chirp/drivers/icf.py) | 12-Dec-2022 | Yes | 0.01% |
 | <a name="Icom_IC-U82"></a> Icom_IC-U82 | [Implied by Icom_IC-V82](#user-content-Icom_IC-V82) | 25-Jan-2023 | Yes |  |
 | <a name="Icom_IC-V80"></a> Icom_IC-V80 | [@kk7ds](https://github.com/kk7ds) | 16-Feb-2023 | Yes | 0.00% |
@@ -249,6 +253,7 @@
 | <a name="Radioddity_UV-82X3"></a> Radioddity_UV-82X3 | [@KC9HI](https://github.com/KC9HI) | 18-Nov-2022 | Yes | 0.05% |
 | <a name="Radtel_RT-470"></a> Radtel_RT-470 | [@KC9HI](https://github.com/KC9HI) | 2-Apr-2023 | Yes | 0.00% |
 | <a name="Radtel_RT-470L"></a> Radtel_RT-470L | [@KC9HI](https://github.com/KC9HI) | 5-May-2023 | Yes |  |
+| <a name="Radtel_RT-470X"></a> Radtel_RT-470X | [@KC9HI](https://github.com/KC9HI) | 10-Aug-2023 | Yes |  |
 | <a name="Radtel_T18"></a> Radtel_T18 | [@KC9HI](https://github.com/KC9HI) | 28-Nov-2022 | Yes | 0.07% |
 | <a name="Retevis_H777S"></a> Retevis_H777S | [@KC9HI](https://github.com/KC9HI) | 22-Dec-2022 | Yes |  |
 | <a name="Retevis_H777_Plus"></a> Retevis_H777_Plus | [@KC9HI](https://github.com/KC9HI) | 4-Dec-2022 | Yes | 0.06% |
@@ -285,12 +290,15 @@
 | <a name="Retevis_RT15"></a> Retevis_RT15 | [@KC9HI](https://github.com/KC9HI) | 18-Feb-2023 | Yes | 0.00% |
 | <a name="Retevis_RT16"></a> Retevis_RT16 | [@KC9HI](https://github.com/KC9HI) | 30-Nov-2022 | Yes | 0.02% |
 | <a name="Retevis_RT19"></a> Retevis_RT19 | [@KC9HI](https://github.com/KC9HI) | 30-Nov-2022 | Yes | 0.00% |
+| <a name="Retevis_RT20"></a> Retevis_RT20 | [@k9ps-paul](https://github.com/k9ps-paul) | 7-Sep-2023 | Yes |  |
 | <a name="Retevis_RT21"></a> Retevis_RT21 | [@KC9HI](https://github.com/KC9HI) | 30-Nov-2022 | Yes | 0.20% |
+| <a name="Retevis_RT21V"></a> Retevis_RT21V | [@KC9HI](https://github.com/KC9HI) | 24-Jul-2023 | Yes | 0.00% |
 | <a name="Retevis_RT22"></a> Retevis_RT22 | [@KC9HI](https://github.com/KC9HI) | 9-Dec-2022 | Yes | 0.53% |
 | <a name="Retevis_RT22FRS"></a> Retevis_RT22FRS | [@KC9HI](https://github.com/KC9HI) | 9-Dec-2022 | Yes | 0.04% |
 | <a name="Retevis_RT22S"></a> Retevis_RT22S | [@KC9HI](https://github.com/KC9HI) | 28-Nov-2022 | Yes | 0.04% |
 | <a name="Retevis_RT23"></a> Retevis_RT23 | [@KC9HI](https://github.com/KC9HI) | 17-Dec-2022 | Yes | 0.04% |
 | <a name="Retevis_RT24"></a> Retevis_RT24 | [@KC9HI](https://github.com/KC9HI) | 22-Dec-2022 | Yes | 0.31% |
+| <a name="Retevis_RT24V"></a> Retevis_RT24V | [@KC9HI](https://github.com/KC9HI) | 27-Aug-2023 | Yes |  |
 | <a name="Retevis_RT26"></a> Retevis_RT26 | [@KC9HI](https://github.com/KC9HI) | 17-Dec-2022 | Yes | 0.03% |
 | <a name="Retevis_RT29_UHF"></a> Retevis_RT29_UHF | [@KC9HI](https://github.com/KC9HI) | 30-Nov-2022 | Yes | 0.03% |
 | <a name="Retevis_RT29_VHF"></a> Retevis_RT29_VHF | [@KC9HI](https://github.com/KC9HI) | 30-Nov-2022 | Yes | 0.02% |
@@ -329,7 +337,7 @@
 | <a name="TYT_TH-350"></a> TYT_TH-350 |  |  | Yes | 0.07% |
 | <a name="TYT_TH-7800"></a> TYT_TH-7800 | [Reported working](https://chirp.danplanet.com/issues/10585) | 4-Jul-2023 | Yes | 0.13% |
 | <a name="TYT_TH-7800_File"></a> TYT_TH-7800_File |  |  |  | 0.00% |
-| <a name="TYT_TH-9800"></a> TYT_TH-9800 | Unit tested; needs confirm | 24-Dec-2022 | Yes | 0.65% |
+| <a name="TYT_TH-9800"></a> TYT_TH-9800 | [Reported working](https://chirp.danplanet.com/issues/10755) | 30-Jul-2023 | Yes | 0.65% |
 | <a name="TYT_TH-9800_File"></a> TYT_TH-9800_File |  |  | Yes | 0.00% |
 | <a name="TYT_TH-UV3R"></a> TYT_TH-UV3R |  |  | Yes | 0.04% |
 | <a name="TYT_TH-UV3R-25"></a> TYT_TH-UV3R-25 |  |  | Yes | 0.02% |
@@ -372,14 +380,13 @@
 | <a name="Yaesu_FT-1D_R"></a> Yaesu_FT-1D_R | [Implied by Yaesu_FT3D_R](#user-content-Yaesu_FT3D_R) | 30-Dec-2022 | Yes | 0.03% |
 | <a name="Yaesu_FT-25R"></a> Yaesu_FT-25R | [Implied by Yaesu_FT-4XE](#user-content-Yaesu_FT-4XE) | 24-Dec-2022 | Yes | 0.01% |
 | <a name="Yaesu_FT-2800M"></a> Yaesu_FT-2800M | [Reported working](https://chirp.danplanet.com/issues/10616) | 05-Jun-2023 | Yes | 0.03% |
-| <a name="Yaesu_FT-2800MTXMod_Opened_Xmit"></a> Yaesu_FT-2800MTXMod_Opened_Xmit |  |  | Yes |  |
 | <a name="Yaesu_FT-2900R_1900R"></a> Yaesu_FT-2900R_1900R | [Reported working](https://chirp.danplanet.com/issues/10274) | 14-Jan-2023 | Yes | 0.05% |
 | <a name="Yaesu_FT-2900R_1900RTXMod_Opened_Xmit"></a> Yaesu_FT-2900R_1900RTXMod_Opened_Xmit | [Implied by Yaesu_FT-2900R_1900R](#user-content-Yaesu_FT-2900R_1900R) | 14-Jan-2023 | Yes |  |
 | <a name="Yaesu_FT-450D"></a> Yaesu_FT-450D | [@Old-Phart](https://github.com/Old-Phart) | 01-Jun-2023 | Yes | 0.01% |
 | <a name="Yaesu_FT-4VR"></a> Yaesu_FT-4VR | [Implied by Yaesu_FT-4XE](#user-content-Yaesu_FT-4XE) | 24-Dec-2022 | Yes | 0.01% |
 | <a name="Yaesu_FT-4XE"></a> Yaesu_FT-4XE | Unit tested; needs confirm | 24-Dec-2022 | Yes | 0.14% |
 | <a name="Yaesu_FT-4XR"></a> Yaesu_FT-4XR | [Implied by Yaesu_FT-4XE](#user-content-Yaesu_FT-4XE) | 24-Dec-2022 | Yes | 0.11% |
-| <a name="Yaesu_FT-50"></a> Yaesu_FT-50 |  |  | Yes | 0.04% |
+| <a name="Yaesu_FT-50"></a> Yaesu_FT-50 | [Reported working](https://chirp.danplanet.com/issues/10824) | 5-Sep-2023 | Yes | 0.04% |
 | <a name="Yaesu_FT-60"></a> Yaesu_FT-60 | N0EYE | 9-Jan-2023 | Yes | 0.49% |
 | <a name="Yaesu_FT-65E"></a> Yaesu_FT-65E | [@kwirk](https://github.com/kwirk) | 27-Jan-2023 | Yes | 0.08% |
 | <a name="Yaesu_FT-65R"></a> Yaesu_FT-65R | [Reported working](https://chirp.danplanet.com/issues/10266) | 13-Jan-2022 | Yes | 0.18% |
@@ -395,7 +402,7 @@
 | <a name="Yaesu_FT-857_897"></a> Yaesu_FT-857_897 | [Implied by Yaesu_FT-817](#user-content-Yaesu_FT-817) | 14-Feb-2019 | Yes | 0.25% |
 | <a name="Yaesu_FT-857_897_US"></a> Yaesu_FT-857_897_US | [Implied by Yaesu_FT-817](#user-content-Yaesu_FT-817) | 14-Feb-2019 | Yes | 0.08% |
 | <a name="Yaesu_FT-8800"></a> Yaesu_FT-8800 | [@kk7ds](https://github.com/kk7ds) | 24-Oct-2022 | Yes | 0.08% |
-| <a name="Yaesu_FT-8900"></a> Yaesu_FT-8900 | [Implied by Yaesu_FT-8800](#user-content-Yaesu_FT-8800) | 24-Oct-2022 | Yes | 0.11% |
+| <a name="Yaesu_FT-8900"></a> Yaesu_FT-8900 | [Reported working](https://chirp.danplanet.com/issues/10753) | 30-Jul-2023 | Yes | 0.11% |
 | <a name="Yaesu_FT-90"></a> Yaesu_FT-90 | [Reported working](https://chirp.danplanet.com/issues/10386) | 22-Feb-2023 | Yes | 0.02% |
 | <a name="Yaesu_FT2D_R"></a> Yaesu_FT2D_R | [Implied by Yaesu_FT3D_R](#user-content-Yaesu_FT3D_R) | 30-Dec-2022 | Yes | 0.02% |
 | <a name="Yaesu_FT2D_Rv2"></a> Yaesu_FT2D_Rv2 | [Implied by Yaesu_FT3D_R](#user-content-Yaesu_FT3D_R) | 30-Dec-2022 | Yes |  |
@@ -416,11 +423,11 @@
 | <a name="Zastone_ZT-X6"></a> Zastone_ZT-X6 | [Implied by Retevis_RT22](#user-content-Retevis_RT22) | 9-Dec-2022 | Yes | 0.11% |
 ## Stats
 
-**Drivers:** 413
+**Drivers:** 420
 
-**Tested:** 86% (357/56) (93% of usage stats)
+**Tested:** 87% (366/54) (93% of usage stats)
 
-**Byte clean:** 90% (373/40)
+**Byte clean:** 90% (380/40)
 
 ## Meaning of this testing
 
@@ -458,21 +465,22 @@ For the purposes of the Python 3 effort, a "tested" radio means
 at least the following procedure was followed:
 1. Download from the radio
 1. Make some change to a memory
-1. If the radio has settings support, make sure settings load and tweak one setting
+1. If the radio has settings support, make sure settings load and tweak
+   one setting
 1. Upload to the radio
 1. Confirm that the changes stick and look correct, or at least are not a
    regression from the master py2 branch.
 
-The drivers are all passing the automated tests, but tests with real hardware
-and serial ports is important, especially around bytes-vs-string safety.
+The drivers are all passing the automated tests, but tests with real
+hardware and serial ports is important, especially around bytes-vs-string
+safety.
 
-To update this document, add/edit entries in `tests/py3_driver_testers.txt` and
-then run `tox -e makesupported`. Commit the result (including the changes to this `.md`
-file) and submit a PR.
+To update this document, add/edit entries in `tests/py3_driver_testers.txt`
+and then run `tox -e makesupported`. Commit the result (including the
+changes to this `.md` file) and submit a PR.
 
 The "Byte Clean" flag refers to whether or not the radio has set the
 `NEEDS_COMPAT_SERIAL = False` flag on the radio class, and thus uses
 `MemoryMapBytes` exclusively internally. Whenever possible, all radios
 that are fixed for py3 should do so with this flag set to False and with
 the byte-native memory map.
-

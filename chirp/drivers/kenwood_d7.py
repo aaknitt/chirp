@@ -288,7 +288,7 @@ class KenwoodD7Family(chirp_common.LiveRadio):
                 'values': ("Open", "1", "2", "3", "4", "5")}
     # Settings that are shared by at least two radios.
     # If a third radio does not have the setting at all, the presence
-    # here won't matter.  If it has it but with differrent parameters,
+    # here won't matter.  If it has it but with different parameters,
     # it can be overridden in the subclass _SETTINGS dict.
     _COMMON_SETTINGS = {
         "AIP": _BOOL,
@@ -324,7 +324,7 @@ class KenwoodD7Family(chirp_common.LiveRadio):
                  'values': ("Off", "Mine", "All New", "All")},
         "CH": _BOOL,
         "CKEY": {'type': 'list',
-                 'values': ("Call", "1750Hz")},
+                 'values': ("Call", "1750 Hz")},
         "CNT": {'type': 'integer', 'min': 1, 'max': 16},
         "DL": _BOOL,
         "DS": {'type': 'list',
@@ -454,7 +454,7 @@ class KenwoodD7Family(chirp_common.LiveRadio):
                            "DGPS")}}
 
     _PROGRAMMABLE_VFOS = (
-        ("Band A, 118MHz Sub-Band", 1, 118, 135),
+        ("Band A, 118 MHz Sub-Band", 1, 118, 135),
         ("Band A, VHF Sub-Band", 2, 136, 173),
         ("Band B, VHF Sub-Band", 3, 144, 147),
         ("Band B, UHF Sub-Band", 6, 400, 479))
@@ -688,7 +688,7 @@ class KenwoodD7Family(chirp_common.LiveRadio):
 
     def _index_to_memid(self, index):
         if not isinstance(index, int):
-            raise errors.RadioError("%s passed as mememory index"
+            raise errors.RadioError("%s passed as memory index"
                                     % str(type(index)))
         if index <= self._UPPER:
             return "%03d" % index
@@ -821,7 +821,7 @@ class KenwoodD7Family(chirp_common.LiveRadio):
 
     def _memid_to_index(self, memid):
         if not isinstance(memid, str):
-            raise errors.RadioError("%s passed as mememory id"
+            raise errors.RadioError("%s passed as memory id"
                                     % str(type(memid)))
         if memid in self._SPECIAL_CHANS:
             return self._SPECIAL_CHANS.index(memid) + self._UPPER + 1
@@ -1748,11 +1748,11 @@ class THD7GRadio(KenwoodD7Family):
                     '1,YA'),
                    ('overlayBOX DTMF & RFID & XO with Letter Z overlaid',
                     '1,ZA'),
-                   (' ARRL,ARES,WinLINK,Dstar, etc', '1,\\a'),
+                   ('ARRL,ARES,WinLINK,Dstar, etc', '1,\\a'),
                    ('AVAIL (BlwngSnow ==> E ovly B', '1,\\B'),
-                   ('AVAIL(Blwng Dst/Snd => E ovly)', '1,\\b'),
+                   ('AVAIL (Blwng Dst/Snd => E ovly)', '1,\\b'),
                    ('Coast Guard', '1,\\C'),
-                   (' CD triangle RACES/SATERN/etc', '1,\\c'),
+                   ('CD triangle RACES/SATERN/etc', '1,\\c'),
                    ('DX spot by callsign', '1,\\d'),
                    ("DEPOTS (Drizzle ==> ' ovly D)", '1,\\D A'),
                    ('Smoke (& other vis codes)', '1,\\E'),
@@ -1765,7 +1765,7 @@ class THD7GRadio(KenwoodD7Family):
                    ('Store. or HAMFST Hh=HAM store', '1,\\h'),
                    ('Rain Shower', '1,\\I'),
                    ('BOX or points of Interest', '1,\\i'),
-                   ('AVAIL (Lightening ==> I ovly L)', '1,\\J'),
+                   ('AVAIL (Lightning ==> I ovly L)', '1,\\J'),
                    ('WorkZone (Steam Shovel)', '1,\\j'),
                    ('Kenwood HT (W)', '1,\\K'),
                    ('Special Vehicle SUV,ATV,4x4', '1,\\k'),
@@ -1973,7 +1973,7 @@ class THD7GRadio(KenwoodD7Family):
                    ('# NWS site (NWS options) with Letter Y overlaid', '1,YW'),
                    ('# NWS site (NWS options) with Letter Z overlaid', '1,ZW'),
                    ('Flooding (Avalanches/Slides)', '1,\\w'),
-                   ('Pharmacy Rx (Apothicary)', '1,\\X'),
+                   ('Pharmacy Rx (Apothecary)', '1,\\X'),
                    ('Wreck or Obstruction ->X<-', '1,\\x'),
                    ('Radios and devices', '1,\\Y'),
                    ('Skywarn', '1,\\y'),
@@ -2164,15 +2164,15 @@ class TMD700Radio(KenwoodD7Family):
                         ('91 Channels', '3'), ('181 Channels', '4'))}}
 
     _PROGRAMMABLE_VFOS = (
-        ("Band A 118MHz Sub-Band", 1, 118, 135),
+        ("Band A 118 MHz Sub-Band", 1, 118, 135),
         ("Band A VHF Sub-Band", 2, 136, 199),
         ("Band B VHF Sub-Band", 3, 136, 174),
-        ("Band A 220MHz Sub-Band", 4, 200, 299),
-        ("Band B 300MHz Sub-Band", 5, 300, 399),
-        ("Band A 300MHz Sub-Band", 6, 300, 399),
+        ("Band A 220 MHz Sub-Band", 4, 200, 299),
+        ("Band B 300 MHz Sub-Band", 5, 300, 399),
+        ("Band A 300 MHz Sub-Band", 6, 300, 399),
         ("Band B UHF Sub-Band", 7, 400, 523),
         ("Band A UHF Sub-Band", 8, 400, 469),
-        ("Band B 1.2GHz Sub-Band", 9, 800, 1299))
+        ("Band B 1.2 GHz Sub-Band", 9, 800, 1299))
 
     _SETTINGS_MENUS = (
         ('Main',
