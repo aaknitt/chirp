@@ -574,6 +574,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
             _mem = self._memobj.chan_mem[memory.number]
             _name = self._memobj.chan_name[memory.number]
             if memory.empty:
+                _mem.set_raw("\x00" * 21)
                 _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
                 return
             else:
@@ -662,7 +663,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
 
     def _get_memory(self, mem, _mem, _name):
         """Convert raw channel memory data into UI columns"""
-        mem.extra = RadioSettingGroup("extra", "Extra")
+        mem.extra = RadioSettingGroup("Extra", "extra")
 
         mem.empty = False
         # This function process both 'normal' and Freq up/down' entries
