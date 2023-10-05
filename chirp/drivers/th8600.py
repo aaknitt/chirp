@@ -551,13 +551,7 @@ class TH8600Radio(chirp_common.CloneModeRadio):
     def process_mmap(self):
         """Process the mem map into the mem object"""
         self._memobj = bitwise.parse(MEM_FORMAT, self._mmap)
-    '''
-    def process_mmap(self):
-        self._memobj = bitwise.parse(
-            TH8600_MEM_FORMAT %
-            (self._mmap_offset, self._scanlimits_offset, self._settings_offset,
-             self._chan_active_offset, self._info_offset), self._mmap)
-    '''
+
     def get_raw_memory(self, number):
         return repr(self._memobj.memory[number])
 
@@ -573,8 +567,8 @@ class TH8600Radio(chirp_common.CloneModeRadio):
         else:
             _mem = self._memobj.chan_mem[memory.number]
             _name = self._memobj.chan_name[memory.number]
+            _mem.set_raw("\x00" * 21)
             if memory.empty:
-                _mem.set_raw("\x00" * 21)
                 _do_map(memory.number, 0, self._memobj.chan_avail.bitmap)
                 return
             else:
