@@ -36,17 +36,17 @@ struct chns {
   ul32 txfreq;
   u8 rxtone[2];
   u8 txtone[2];
-  u8  wide:1   // 0x0c
-      vox_on:1
-      chunk01:1
-      bcl:1    // inv bool
-      epilogue:1
-      power:1
-      chunk02:1
+  u8  wide:1,  // 0x0c
+      vox_on:1,
+      chunk01:1,
+      bcl:1,    // inv bool
+      epilogue:1,
+      power:1,
+      chunk02:1,
       chunk03:1;
-  u8  ani:1     // 0x0d inv
-      chunk08:1
-      ptt:2
+  u8  ani:1,    // 0x0d inv
+      chunk08:1,
+      ptt:2,
       chpad04:4;
   u8  chunk05;  // 0x0e
   u16 id_code; // 0x0f, 10
@@ -64,22 +64,22 @@ struct fm_chn {
 struct frqx {
   ul32 rxfreq;
   ul24 ofst;
-  u8  fqunk01:4  // 0x07
-      funk10:2
+  u8  fqunk01:4,  // 0x07
+      funk10:2,
       duplx:2;
   u8 rxtone[2]; // 0x08, 9
   u8 txtone[2]; // 0x0a, b
-  u8  wide:1    // 0x0c
-      vox_on:1
-      funk11:1
-      bcl:1     // inv bool
-      epilogue:1
-      power:1
+  u8  wide:1,    // 0x0c
+      vox_on:1,
+      funk11:1,
+      bcl:1,     // inv bool
+      epilogue:1,
+      power:1,
       fqunk02:2;
-  u8  ani:1     // 0x0d inv bool
-      fqunk03:1
-      ptt:2
-      fqunk12:1
+  u8  ani:1,     // 0x0d inv bool
+      fqunk03:1,
+      ptt:2,
+      fqunk12:1,
       fqunk04:3;
   u8  fqunk07;  // 0x0e
   u16 id_code;  // 0x0f, 0x10
@@ -94,13 +94,10 @@ struct bitmap {
 #seekto 0x0010;
 struct chns chan_mem[128];
 
-#seekto 0x1010;
 struct frqx frq[2];
 
-#seekto 0x1050;
 struct fm_chn fm_stations[25];
 
-#seekto 0x1080;
 struct {
   u8  fmunk01[14];
   ul16 fmcur;
@@ -109,54 +106,51 @@ struct {
 #seekto 0x1190;
 struct bitmap chnmap;
 
-#seekto 0x11a0;
 struct bitmap skpchns;
 
-#seekto 0x011b0;
 struct {
   u8  fmset[4];
 } fmmap;
 
-#seekto 0x011b4;
 struct {
   u8  setunk01[4];
   u8  setunk02[3];
-  u8  chs_name:1    // 0x11bb
-      txsel:1
-      dbw:1
-      setunk05:1
-      ponfmchs:2
+  u8  chs_name:1,    // 0x11bb
+      txsel:1,
+      dbw:1,
+      setunk05:1,
+      ponfmchs:2,
       ponchs:2;
-  u8  voltx:2       // 0x11bc
-      setunk04:1
-      keylok:1
-      setunk07:1
+  u8  voltx:2,       // 0x11bc
+      setunk04:1,
+      keylok:1,
+      setunk07:1,
       batsav:3;
-  u8  setunk09:1    // 0x11bd
-      rxinhib:1
-      rgrbeep:1    // inv bool
-      lampon:2
-      voice:2
+  u8  setunk09:1,    // 0x11bd
+      rxinhib:1,
+      rgrbeep:1,    // inv bool
+      lampon:2,
+      voice:2,
       beepon:1;
-  u8  setunk11:1    // 0x11be
-      manualset:1
-      xbandon:1     // inv
-      xbandenable:1
-      openmsg:2
+  u8  setunk11:1,    // 0x11be
+      manualset:1,
+      xbandon:1,     // inv
+      xbandenable:1,
+      openmsg:2,
       ledclr:2;
-  u8  tot:4         // 0x11bf
+  u8  tot:4,         // 0x11bf
       sql:4;
-  u8  setunk27:1   // 0x11c0
-      voxdelay:2
-      setunk28:1
+  u8  setunk27:1,   // 0x11c0
+      voxdelay:2,
+      setunk28:1,
       voxgain:4;
-  u8  fmstep:4      // 0x11c1
+  u8  fmstep:4,      // 0x11c1
       freqstep:4;
-  u8  scanspeed:4   // 0x11c2
+  u8  scanspeed:4,   // 0x11c2
       scanmode:4;
   u8  scantmo;      // 0x11c3
   u8  prichan;      // 0x11c4
-  u8  setunk12:4    // 0x11c5
+  u8  setunk12:4,    // 0x11c5
       supersave:4;
   u8  setunk13;
   u8  fmsclo;       // 0x11c7 ??? placeholder
@@ -164,26 +158,26 @@ struct {
   u8  fmschi;       // ??? placeholder
   u8  setunk14[3];  // 0x11d0
   u8 setunk17[2];   // 0x011d3, 4
-  u8  setunk18:4
+  u8  setunk18:4,
       dtmfspd:4;
-  u8  dtmfdig1dly:4 // 0x11d6
+  u8  dtmfdig1dly:4, // 0x11d6
       dtmfdig1time:4;
-  u8  stuntype:1
-      setunk19:1
-      dtmfspms:2
+  u8  stuntype:1,
+      setunk19:1,
+      dtmfspms:2,
       grpcode:4;
-  u8  setunk20:1    // 0x11d8
-      txdecode:1
-      codeabcd:1
-      idedit:1
-      pttidon:2
+  u8  setunk20:1,    // 0x11d8
+      txdecode:1,
+      codeabcd:1,
+      idedit:1,
+      pttidon:2,
       setunk40:1,
       dtmfside:1;
   u8  setunk50:4,
       autoresettmo:4;
   u8  codespctim:4, // 0x11da
       decodetmo:4;
-  u8  pttecnt:4     // 0x11db
+  u8  pttecnt:4,     // 0x11db
       pttbcnt:4;
   lbcd  dtmfdecode[3];
   u8  setunk22;
@@ -199,11 +193,11 @@ struct {
   u8  setunk65;
   u8  setunk66;
   u8  manfrqyn;     // 0x11fd
-  u8  setunk27:3
-      frqr3:1
-      setunk28:1
-      frqr2:1
-      setunk29:1
+  u8  setunk27:3,
+      frqr3:1,
+      setunk28:1,
+      frqr2:1,
+      setunk29:1,
       frqr1:1;
   u8  setunk25;
   ul32 frqr1lo;  // 0x1200
@@ -518,21 +512,20 @@ class THUV8000Radio(chirp_common.CloneModeRadio):
     def get_prompts(cls):
         rp = chirp_common.RadioPrompts()
         rp.info = \
-            ('Click on the "Special Channels" toggle-button of the memory '
-             'editor to see/set the upper and lower frequency-mode values.\n')
+            ('Remember the # T-R key is the VFO/MEM toggle.\n')
 
         rp.pre_download = _(
             "Follow these instructions to download the radio memory:\n"
             "1 - Turn off your radio\n"
             "2 - Connect your interface cable\n"
             "3 - Turn on your radio, volume @ 50%\n"
-            "4 - Radio > Download from radio\n")
+            "4 - CHIRP Menu - Radio - Download from radio\n")
         rp.pre_upload = _(
             "Follow these instructions to upload the radio memory:\n"
             "1 - Turn off your radio\n"
             "2 - Connect your interface cable\n"
             "3 - Turn on your radio, volume @ 50%\n"
-            "4 - Radio > Upload to radio\n")
+            "4 - CHIRP Menu - Radio - Upload to radio\n")
         return rp
 
     def get_features(self):
@@ -603,7 +596,7 @@ class THUV8000Radio(chirp_common.CloneModeRadio):
         self._memobj = bitwise.parse(MEM_FORMAT, self._mmap)
 
     def get_raw_memory(self, number):
-        return repr(self._memobj.memory[number - 1])
+        return repr(self._memobj.chan_mem[number - 1])
 
     def get_memory(self, number):
         if isinstance(number, str):
@@ -635,7 +628,7 @@ class THUV8000Radio(chirp_common.CloneModeRadio):
         """Convert raw channel memory data into UI columns"""
         mem.extra = RadioSettingGroup("extra", "Extra")
 
-        if _mem.get_raw()[0] == "\xff":
+        if _mem.get_raw(asbytes=False)[0] == "\xff":
             mem.empty = True
             return mem
 

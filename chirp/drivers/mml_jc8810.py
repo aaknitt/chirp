@@ -37,7 +37,6 @@ from chirp.settings import (
 LOG = logging.getLogger(__name__)
 
 MEM_FORMAT = """
-#seekto 0x0000;
 struct {
   lbcd rxfreq[4];     // 0-3
   lbcd txfreq[4];     // 4-7
@@ -85,7 +84,8 @@ struct {
      dtmfst:2;        //      DTMF ST
   u8 unused_900a:6,   // 900A
      screv:2;         //      Scan Mode
-  u8 unknown_900b;    // 900B
+  u8 unused_900B:4,   // 900B
+     pttid:4;         //      PTT-ID
   u8 unused_900c:5,   // 900C
      pttlt:3;         //      PTT Delay
   u8 unused_900d:6,   // 900D
@@ -150,21 +150,20 @@ struct {
                       //      RX END TAIL (A36plus)
 } settings;
 
-#seekto 0xA020;
-struct {
-  u8 code[5];         //      5-character DTMF Encoder Groups
-  u8 unused[11];
-} pttid[15];
-
 #seekto 0xA006;
 struct {
-  u8 unused_a006:4,   // A006
-     pttid:4;         //      PTT-ID
+  u8 unknown_A006;    // A006
   u8 unused_a007:5,   // A007
      dtmfon:3;        //      DTMF Speed (on time)
   u8 unused_a008:5,   // A008
      dtmfoff:3;       //      DTMF Speed (off time)
 } dtmf;
+
+#seekto 0xA020;
+struct {
+  u8 code[5];         //      5-character DTMF Encoder Groups
+  u8 unused[11];
+} pttid[15];
 
 #seekto 0xB000;
 struct {
@@ -177,6 +176,9 @@ struct {
   u8 unused[6];
 } aninames[%d];
 
+"""
+
+MEM_FORMAT_A36PLUS = """
 #seekto 0xB200;
 struct {
   char name[10];      //      10-character Custom CH Names (Talkpod A36plus)
@@ -287,6 +289,14 @@ def _enter_programming_mode(radio):
     if ident not in radio._fingerprint:
         LOG.debug(util.hexprint(ident))
         raise errors.RadioError("Radio returned unknown identification string")
+
+    if radio.MODEL == "RT-470X":
+        if ident in radio._fingerprint_pcb1:
+            LOG.info("Radtel RT-470X - original pcb")
+            radio.RT470X_ORIG = True
+        elif ident in radio._fingerprint_pcb2:
+            LOG.info("Radtel RT-470X - pcb2")
+            radio.RT470X_ORIG = False
 
 
 def _exit_programming_mode(radio):
@@ -490,12 +500,6 @@ class JC8810base(chirp_common.CloneModeRadio):
             raise errors.RadioError('Unexpected error communicating '
                                     'with the radio')
 
-    def _is_txinh(self, _mem):
-        raw_tx = ""
-        for i in range(0, 4):
-            raw_tx += _mem.txfreq[i].get_raw()
-        return raw_tx == "\xFF\xFF\xFF\xFF"
-
     def get_memory(self, number):
         """Get the mem representation from the radio image"""
         _mem = self._memobj.memory[number - 1]
@@ -506,14 +510,14 @@ class JC8810base(chirp_common.CloneModeRadio):
         # Memory number
         mem.number = number
 
-        if _mem.get_raw()[0] == "\xff":
+        if _mem.get_raw()[:1] == b"\xFF":
             mem.empty = True
             return mem
 
         # Freq and offset
         mem.freq = int(_mem.rxfreq) * 10
         # tx freq can be blank
-        if _mem.get_raw()[4] == "\xFF":
+        if _mem.get_raw()[:4] == b"\xFF\xFF\xFF\xFF":
             # TX freq not set
             mem.offset = 0
             mem.duplex = "off"
@@ -999,7 +1003,7 @@ class JC8810base(chirp_common.CloneModeRadio):
         rset = RadioSetting("ponmsg", "Power On Message", rs)
         basic.append(rset)
 
-        if self.MODEL in ["HI-8811", "RT-470L"]:
+        if self.MODEL in ["HI-8811", "RT-470L", "RT-470X"]:
             rs = RadioSettingValueList(TAILCODE_LIST,
                                        TAILCODE_LIST[_settings.tailcode])
             rset = RadioSetting("tailcode", "Tail Code", rs)
@@ -1118,8 +1122,8 @@ class JC8810base(chirp_common.CloneModeRadio):
         rset = RadioSetting("dtmf.dtmfoff", "DTMF Speed (off)", rs)
         dtmf.append(rset)
 
-        rs = RadioSettingValueList(PTTID_LIST, PTTID_LIST[_dtmf.pttid])
-        rset = RadioSetting("dtmf.pttid", "PTT ID", rs)
+        rs = RadioSettingValueList(PTTID_LIST, PTTID_LIST[_settings.pttid])
+        rset = RadioSetting("pttid", "PTT ID", rs)
         dtmf.append(rset)
 
         ani = RadioSettingGroup("ani", "ANI Code List Settings")
@@ -1294,8 +1298,22 @@ class RT470XRadio(RT470LRadio):
 
     # ==========
     # Notice to developers:
-    # The RT-470 support in this driver is currently based upon v1.18 firmware.
+    # The RT-470X support in this driver is currently based upon...
+    # - v1.18a firmware (original pcb)
+    # - v2.10a firmware (pcb2)
     # ==========
+
+    # original pcb
+    _fingerprint_pcb1 = [b"\x00\x00\x00\x20\x00\x20\xCC\x04",
+                         ]
+
+    # pcb 2
+    _fingerprint_pcb2 = [b"\x00\x00\x00\x2C\x00\x20\xD8\x04",  # fw v2.10A
+                         ]
+
+    _fingerprint = _fingerprint_pcb1 + _fingerprint_pcb2
+
+    RT470X_ORIG = False
 
     VALID_BANDS = [(100000000, 136000000),
                    (136000000, 200000000),
@@ -1393,6 +1411,10 @@ class A36plusRadio(JC8810base):
     _mem_params = (_upper,  # number of channels
                    _aninames,  # number of aninames
                    )
+
+    def process_mmap(self):
+        mem_format = MEM_FORMAT % self._mem_params + MEM_FORMAT_A36PLUS
+        self._memobj = bitwise.parse(mem_format, self._mmap)
 
 
 @directory.register
