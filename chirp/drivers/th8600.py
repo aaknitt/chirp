@@ -33,19 +33,19 @@ struct chns {
   ul16 rxtone;
   ul16 txtone;
 
-  u8 power:2          // High=00,Mid=01,Low=10
-     mode:2          //  WFM=00, FM=01, NFM=10
-     b_lock:2         // off=00, sub=01, carrier=10
-     REV:1
+  u8 power:2,          // High=00,Mid=01,Low=10
+     mode:2,          //  WFM=00, FM=01, NFM=10
+     b_lock:2,         // off=00, sub=01, carrier=10
+     REV:1,
      TxInh:1;
-  u8 sqlmode:3         // SQ=000, CT=001, Tone=010,
+  u8 sqlmode:3,         // SQ=000, CT=001, Tone=010,
                        //CT or Tone=011, CTC and Tone=100
-     signal:2          // off=00, dtmf=01, 2-tone=10, 5-tone=11
-     display: 1
-     talkoff: 1
+     signal:2,          // off=00, dtmf=01, 2-tone=10, 5-tone=11
+     display: 1,
+     talkoff: 1,
      TBD: 1;
-  u8 fivetonepttid: 2  //off=00, begin=01,end=10,both=11
-     dtmfpttid: 2      //off=00, begin=01,end=10,both=11
+  u8 fivetonepttid: 2,  //off=00, begin=01,end=10,both=11
+     dtmfpttid: 2,      //off=00, begin=01,end=10,both=11
      tuning_step: 4;   //
   u8 name[6];
 };
